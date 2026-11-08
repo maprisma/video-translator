@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Maprisma Video Translator
+Comment=Live translated captions over any video, call or microphone
+Type=Application
+Exec=maprisma-video-translator-applet
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Applet;Captions;Subtitles;Translate;Whisper;
+Icon=media-view-subtitles-symbolic
+NoDisplay=true
+X-CosmicApplet=true
+X-HostWaylandDisplay=true
+X-OverflowPriority=10

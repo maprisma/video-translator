@@ -1,0 +1,368 @@
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+from unittest.mock import Mock, patch
+
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+os.environ['QT_QPA_PLATFORMTHEME'] = 'none'
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from PySide6.QtWidgets import QApplication
+import gui
+from core import DEFAULTS
+
+APP = QApplication.instance() or QApplication([])
+
+
+class WindowFixture(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.patches = [patch.object(gui, 'CONFIG', Path(self.directory.name)),
+                        patch.object(gui, 'load_settings', return_value=DEFAULTS.copy()),
+                        patch.object(gui.Window, 'send')]
+        for item in self.patches:
+            item.start()
+        self.window = gui.Window()
+        self.worker = self.window.process
+
+    def tearDown(self):
+        self.window.process = self.worker
+        self.window.close()
+        for item in reversed(self.patches):
+            item.stop()
+        self.directory.cleanup()
+
+    def event(self, event):
+        self.window.process = Mock()
+        self.window.process.readAllStandardOutput.return_value = (json.dumps(event) + '\n').encode()
+        self.window.read_events()
+
+
+class WindowTests(WindowFixture):
+    def test_caption_text_colour_presets_custom_and_theme(self):
+        self.assertEqual(self.window.current_settings()['text_color'], 'auto')  # default
+        theme = gui.read_theme()
+        for choice, text, back in (('black', '#000000', '#ffffff'), ('white', '#ffffff', '#000000'),
+                                   ('yellow', '#ffe14d', '#000000'), ('#FFCC00', '#ffcc00', '#000000'),
+                                   ('#102040', '#102040', '#ffffff')):
+            self.window.configure(dict(settings=dict(text_color=choice)))
+            state = self.window.overlay_state()['theme']
+            self.assertEqual((state['foreground'], state['background']), (text, back))
+            self.assertIn('color: ' + text, self.window.centralWidget().styleSheet())
+        self.assertIn(dict(value='#102040', label='Custom #102040'), self.window.snapshot()['text_colors'])
+        self.window.configure(dict(settings=dict(text_color='theme')))
+        self.assertEqual(self.window.overlay_state()['theme']['foreground'], theme['foreground'])
+
+    def test_automatic_colour_follows_the_shells_brightness(self):
+        self.window.configure(dict(settings=dict(text_color='auto')))
+        self.assertEqual(self.window.overlay_state()['theme']['foreground'], '#ffffff')
+        self.window.handle_request(dict(action='overlay-state', luminance=0.9))
+        self.assertEqual(self.window.overlay_state()['theme']['foreground'], '#000000')
+        self.window.handle_request(dict(action='overlay-state', luminance=0.1))
+        self.assertEqual(self.window.overlay_state()['theme']['foreground'], '#ffffff')
+        for bad in ('0.9', True, None, [1]):
+            self.window.handle_request(dict(action='overlay-state', luminance=bad))
+            self.assertEqual(self.window.overlay_state()['theme']['foreground'], '#ffffff')
+
+    def test_brightness_is_ignored_unless_automatic(self):
+        self.window.configure(dict(settings=dict(text_color='white')))
+        self.window.handle_request(dict(action='overlay-state', luminance=0.95))
+        self.assertFalse(self.window.auto_bright)
+
+    def test_accent_from_the_shell_colours_the_border(self):
+        self.window.handle_request(dict(action='overlay-state', accent='green'))
+        self.assertEqual(self.window.overlay_state()['theme']['border_color'], '#3a944a')
+        self.window.handle_request(dict(action='overlay-state', accent='#ff0000; color: red'))
+        self.assertEqual(self.window.overlay_state()['theme']['border_color'], '#3a944a')
+
+    def test_capture_stops_when_the_shell_stops_polling(self):
+        self.window.show_overlay()
+        self.window.running = True
+        self.window.overlay_seen = gui.time.monotonic() - gui.OVERLAY_TIMEOUT - 1
+        with patch.object(self.window, 'stop_capture') as stop:
+            self.window.watch_overlay()
+            stop.assert_called_once()
+        self.assertFalse(self.window.layer_open)
+
+    def test_settings_window_hold_keeps_the_controller(self):
+        self.window.handle_request({'action': 'state', 'hold': True})
+        with patch.object(self.window, 'close') as close:
+            self.window.handle_request({'action': 'release'})
+            close.assert_not_called()
+
+    def test_caption_text_colour_changes_while_translating(self):
+        self.window.running = True
+        self.window.configure(dict(settings=dict(text_color='black', target='French')))
+        self.assertEqual(self.window.current_settings()['text_color'], 'black')
+        self.assertNotEqual(self.window.current_settings()['target'], 'French')
+
+    def test_unknown_text_colour_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.window.configure(dict(settings=dict(text_color='<b>red</b>')))
+        with self.assertRaises(ValueError):
+            self.window.configure(dict(settings=dict(text_color='#12345')))
+
+    def test_whisper_first_and_output_default(self):
+        self.assertEqual(self.window.form.labelForField(self.window.speech_provider).text(), 'Speech provider')
+        self.assertEqual(self.window.speech_provider.currentText(), 'Whisper (local)')
+        self.assertEqual(self.window.audio_input.currentText(), 'Audio output')
+        self.window.audio_input.setCurrentText('Microphone')
+        self.assertEqual(self.window.current_settings()['audio_input'], 'Microphone')
+
+    def test_captions_are_plain_text_and_retained(self):
+        self.event(dict(type='caption', timestamp='12:00', language='en', text='<b>hello</b>'))
+        self.event(dict(type='caption', timestamp='12:01', language='fr', text='Guten Tag'))
+        text = self.window.captions.toPlainText()
+        self.assertIn('<b>hello</b>', text)
+        self.assertIn('Guten Tag', text)
+        self.assertNotIn('12:00', text)
+        self.assertNotIn('12:01', text)
+        self.assertNotIn(' · fr', text)
+        self.assertLessEqual(self.window.captions.document().blockCount(), self.window.history.value())
+
+    def test_close_waits_for_cleanup_without_blocking_gui(self):
+        self.window.process = Mock()
+        self.window.process.state.return_value = gui.QProcess.Running
+        event = Mock()
+        self.window.closeEvent(event)
+        event.ignore.assert_called_once()
+        self.window.process.write.assert_called_once_with(b'{"action":"stop"}\n')
+        self.assertTrue(self.window.closing)
+
+    def test_error_survives_worker_stop(self):
+        self.event(dict(type='error', message='Provider unavailable'))
+        self.window.finished(0, gui.QProcess.NormalExit)
+        self.assertIn('Provider unavailable', self.window.status.text())
+
+    def test_theme_defaults_and_custom_border_transparency(self):
+        self.assertEqual(self.window.transparency.value(), 100)
+        self.assertEqual(self.window.border_width.value(), 1)
+        self.window.transparency.setValue(75)
+        self.window.border_width.setValue(6)
+        settings = self.window.current_settings()
+        self.assertEqual(settings['background_transparency'], 75)
+        self.assertEqual(settings['border_width'], 6)
+        self.assertIn('border: 6px', self.window.centralWidget().styleSheet())
+
+    def test_pause_keeps_previous_captions(self):
+        self.event(dict(type='caption', timestamp='12:00', language='en', text='Erster Satz.'))
+        before = self.window.captions.toPlainText()
+        self.event(dict(type='status', message='Listening'))
+        APP.processEvents()
+        self.assertEqual(self.window.captions.toPlainText(), before)
+        self.event(dict(type='caption', timestamp='12:01', language='en', text='Nächster Satz.'))
+        self.assertIn('Erster Satz.', self.window.captions.toPlainText())
+        self.assertIn('Nächster Satz.', self.window.captions.toPlainText())
+
+    def test_each_caption_expires_after_five_seconds(self):
+        with patch.object(gui.time, 'monotonic', return_value=100):
+            self.event(dict(type='caption', language='en', text='First sentence.'))
+        with patch.object(gui.time, 'monotonic', return_value=103):
+            self.event(dict(type='caption', language='en', text='Second sentence.'))
+        with patch.object(gui.time, 'monotonic', return_value=105):
+            self.window.expire_captions()
+        self.assertEqual(self.window.captions.toPlainText(), 'Second sentence.')
+        with patch.object(gui.time, 'monotonic', return_value=108):
+            self.window.expire_captions()
+        self.assertEqual(self.window.captions.toPlainText(), '')
+
+    def test_duration_and_font_are_adjustable_during_capture(self):
+        self.window.running = True
+        self.window.configure({'settings': {'caption_seconds': 12, 'font_size': 16}})
+        self.assertEqual(self.window.current_settings()['caption_seconds'], 12)
+        self.assertEqual(self.window.current_settings()['font_size'], 16)
+        self.assertLess(self.window.minimumHeight(), 230)
+        with patch.object(gui.time, 'monotonic', return_value=100):
+            self.event(dict(type='caption', language='en', text='Longer display.'))
+        with patch.object(gui.time, 'monotonic', return_value=111):
+            self.window.expire_captions()
+        self.assertIn('Longer display.', self.window.captions.toPlainText())
+        with patch.object(gui.time, 'monotonic', return_value=112):
+            self.window.expire_captions()
+        self.assertEqual(self.window.captions.toPlainText(), '')
+
+    def test_clear_does_not_restore_expired_history(self):
+        self.event(dict(type='caption', language='en', text='Old sentence.'))
+        self.window.handle_request({'action': 'clear'})
+        self.event(dict(type='caption', language='en', text='New sentence.'))
+        self.assertEqual(self.window.captions.toPlainText(), 'New sentence.')
+
+    def test_start_sends_capture_command_and_replaces_idle_placeholder(self):
+        self.window.output.addItem('Playback', 'playback.monitor')
+        self.window.model.setCurrentText('local-model')
+        self.window.start_capture()
+        self.window.send.assert_called_with('start')
+        self.assertTrue(self.window.running)
+        self.assertTrue(self.window.starting)
+        self.assertIn('Starting translation', self.window.captions.placeholderText())
+        self.event(dict(type='started'))
+        self.assertFalse(self.window.starting)
+        self.assertIn('Listening', self.window.captions.placeholderText())
+
+    def test_failed_start_does_not_leave_panel_showing_stop(self):
+        self.window.output.addItem('Playback', 'playback.monitor')
+        self.window.model.setCurrentText('local-model')
+        self.window.send.return_value = False
+        self.window.start_capture()
+        self.assertFalse(self.window.running)
+        self.assertFalse(self.window.starting)
+        self.assertTrue(self.window.start.isEnabled())
+        self.assertIn('Worker failed', self.window.captions.placeholderText())
+
+    def test_startup_check_results_are_exposed_to_native_panel(self):
+        self.event(dict(type='check', id='whisper', label='Whisper', status='ok', detail='small · ready'))
+        self.assertEqual(self.window.snapshot()['checks'][0]['status'], 'ok')
+        self.event(dict(type='check', id='whisper', label='Whisper', status='error', detail='Unavailable'))
+        checks = self.window.snapshot()['checks']
+        self.assertEqual(len(checks), 1)
+        self.assertEqual(checks[0]['status'], 'error')
+
+    def test_download_selected_whisper_does_not_start_capture(self):
+        self.window.speech_model.setCurrentText('medium')
+        self.window.handle_request({'action': 'download'})
+        self.window.send.assert_called_with('download')
+        self.assertTrue(self.window.downloading)
+        self.assertFalse(self.window.running)
+        self.event(dict(type='downloaded', model='medium'))
+        self.assertFalse(self.window.downloading)
+        self.assertIn('downloaded and ready', self.window.status.text())
+
+    def test_layer_state_contains_captions_but_never_credentials(self):
+        self.window.layer_mode = True
+        self.window.layer_open = True
+        self.window.token.setText('private-test-token')
+        self.window.captions.setPlainText('Lesbare Untertitel')
+        state = self.window.handle_request({'action': 'overlay-state'})
+        self.assertEqual(state['text'], 'Lesbare Untertitel')
+        self.assertTrue(state['open'])
+        self.assertNotIn('private-test-token', json.dumps(state))
+
+    def test_closing_panel_keeps_layer_overlay(self):
+        self.window.layer_mode = True
+        self.window.layer_open = True
+        with patch.object(self.window, 'close') as close:
+            self.window.handle_request({'action': 'release'})
+            close.assert_not_called()
+
+    def test_toggle_closes_visible_overlay(self):
+        self.window.show_overlay()
+        with patch.object(self.window, 'close') as close:
+            self.window.handle_request({'action': 'toggle'})
+            close.assert_called_once()
+
+    def test_toggle_opens_hidden_overlay_and_starts_translation(self):
+        def opened():
+            self.window.layer_open = True
+        with patch.object(self.window, 'show_overlay', side_effect=opened) as show, \
+                patch.object(self.window, 'start_capture') as start:
+            self.window.handle_request({'action': 'toggle'})
+            show.assert_called_once()
+            start.assert_called_once()
+
+    def test_border_hides_on_focus_loss_and_returns_on_focus(self):
+        self.window.show()
+        self.assertNotIn('solid transparent', self.window.centralWidget().styleSheet())
+        event = gui.QEvent(gui.QEvent.ActivationChange)
+        with patch.object(self.window, 'isActiveWindow', return_value=False):
+            self.window.changeEvent(event)
+        self.assertIn('border: 1px solid transparent', self.window.centralWidget().styleSheet())
+        self.window.apply_appearance()
+        self.assertIn('border: 1px solid transparent', self.window.centralWidget().styleSheet())
+        with patch.object(self.window, 'isActiveWindow', return_value=True):
+            self.window.changeEvent(event)
+        self.assertNotIn('solid transparent', self.window.centralWidget().styleSheet())
+
+    def test_suggestion_updates_selected_local_provider_and_model(self):
+        self.event(dict(type='suggestion', provider='Ollama', endpoint='http://127.0.0.1:11434',
+                        models=['qwen3:4b'], model='qwen3:4b', reason='Suggested model'))
+        self.assertEqual(self.window.provider.currentText(), 'Ollama')
+        self.assertEqual(self.window.model.currentText(), 'qwen3:4b')
+
+    def test_overlay_has_no_settings_tab_or_translation_controls(self):
+        self.assertFalse(self.window.tabs.isTabVisible(1))
+        self.assertTrue(self.window.start.isHidden())
+        self.assertTrue(self.window.stop.isHidden())
+        self.assertTrue(self.window.compact.isHidden())
+        self.assertTrue(self.window.scroll.isHidden())
+        self.assertFalse(any(button.isVisibleTo(self.window) for button in self.window.findChildren(gui.QPushButton)))
+
+    def test_ipc_snapshot_never_exposes_token(self):
+        self.window.token.setText('private-online-token')
+        state = self.window.snapshot()
+        self.assertTrue(state['key_ready'])
+        self.assertNotIn('private-online-token', json.dumps(state))
+
+    def test_overlay_appearance_change_keeps_unsaved_authentication(self):
+        self.window.token.setText('private-online-token')
+        self.window.configure({'settings': self.window.current_settings() | {'background_transparency': 60}})
+        self.assertEqual(self.window.token.text(), 'private-online-token')
+        self.assertEqual(self.window.transparency.value(), 60)
+
+    def test_closing_panel_keeps_visible_overlay_and_capture(self):
+        self.window.show_overlay()
+        self.window.running = True
+        with patch.object(self.window, 'close') as close:
+            self.window.handle_request({'action': 'release'})
+            close.assert_not_called()
+        self.assertTrue(self.window.running)
+
+    def test_closing_panel_releases_hidden_controller(self):
+        with patch.object(self.window, 'close') as close:
+            self.window.handle_request({'action': 'release'})
+            close.assert_called_once()
+
+    def test_panel_stop_closes_overlay_and_requests_worker_cleanup(self):
+        self.window.show()
+        self.window.process = Mock()
+        self.window.process.state.return_value = gui.QProcess.Running
+        state = self.window.handle_request({'action': 'stop'})
+        self.assertFalse(state['overlay'])
+        self.assertTrue(self.window.closing)
+        self.window.process.write.assert_called_once_with(b'{"action":"stop"}\n')
+
+    def test_overlay_can_resize_in_both_dimensions(self):
+        self.window.show()
+        self.window.resize(1100, 600)
+        self.assertEqual((self.window.width(), self.window.height()), (1100, 600))
+        self.window.resize(650, 350)
+        self.assertEqual((self.window.width(), self.window.height()), (650, 350))
+        self.assertTrue(self.window.resize_grip.isVisible())
+
+    def test_resize_handle_requests_native_compositor_resize(self):
+        event = Mock()
+        event.button.return_value = gui.Qt.LeftButton
+        handle = Mock()
+        handle.startSystemResize.return_value = True
+        with patch.object(self.window, 'windowHandle', return_value=handle):
+            self.window.resize_grip.mousePressEvent(event)
+        handle.startSystemResize.assert_called_once_with(gui.Qt.RightEdge | gui.Qt.BottomEdge)
+        event.accept.assert_called_once()
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+class HostileStateTests(WindowFixture):
+    def test_model_events_are_capped_and_bar_poll_is_brief(self):
+        huge = ['x' * 1_000_000] + ['m%d' % i for i in range(50_000)] + [42, None]
+        self.event(dict(type='models', models=huge))
+        self.assertLessEqual(len(self.window.models), gui.clean_model_ids.__globals__['MAX_MODELS'])
+        self.assertLess(len(json.dumps(self.window.snapshot())), 64 * 1024)
+        self.event(dict(type='suggestion', models=huge, model='x' * 1_000_000, provider='llama.cpp',
+                        endpoint='http://127.0.0.1:8080', reason='r' * 1_000_000))
+        self.assertLess(len(json.dumps(self.window.snapshot())), 64 * 1024)
+        brief = self.window.handle_request(dict(action='brief', keep=True))
+        self.assertEqual(set(brief), {'running', 'starting', 'settings'})
+        self.assertEqual(brief['settings']['target'], 'German')
+        self.assertLess(len(json.dumps(brief)), 200)
+
+    def test_captions_and_status_are_bounded_for_the_overlay(self):
+        for _ in range(50):
+            self.event(dict(type='caption', text='y' * 1_000_000, language='en'))
+        self.event(dict(type='error', message='e' * 1_000_000))
+        state = self.window.overlay_state()
+        self.assertLessEqual(len(state['text']), gui.MAX_OVERLAY_TEXT)
+        self.assertLessEqual(len(state['status']), gui.MAX_STATUS_CHARS)

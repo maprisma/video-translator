@@ -1,0 +1,52 @@
+// Maprisma Video Translator for the COSMIC desktop: the window with the controls and all settings, a
+// Flutter port of the GNOME extension's settings window. It talks only to the backend's
+// bridge.sh; the panel applet starts it ("Open Maprisma Video Translator…").
+
+import 'package:flutter/material.dart';
+
+import 'bridge.dart';
+import 'desktop_theme.dart';
+import 'translator_page.dart';
+
+void main() {
+  runApp(TranslatorApp(bridge: Bridge()));
+}
+
+class TranslatorApp extends StatefulWidget {
+  const TranslatorApp({super.key, required this.bridge, this.desktopTheme});
+
+  final Bridge bridge;
+  final DesktopTheme? desktopTheme;
+
+  @override
+  State<TranslatorApp> createState() => _TranslatorAppState();
+}
+
+class _TranslatorAppState extends State<TranslatorApp> {
+  late final DesktopTheme _desktop = widget.desktopTheme ?? DesktopTheme();
+
+  @override
+  void initState() {
+    super.initState();
+    _desktop.start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Color?>(
+      valueListenable: _desktop.accent,
+      builder: (context, accent, _) => MaterialApp(
+        title: 'Maprisma Video Translator',
+        debugShowCheckedModeBanner: false,
+        themeMode: ThemeMode.system,
+        theme: DesktopTheme.theme(Brightness.light, accent),
+        darkTheme: DesktopTheme.theme(Brightness.dark, accent),
+        builder: (context, child) {
+          _desktop.syncHeader(Theme.of(context));
+          return child!;
+        },
+        home: TranslatorPage(bridge: widget.bridge),
+      ),
+    );
+  }
+}

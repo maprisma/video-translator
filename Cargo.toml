@@ -1,0 +1,6 @@
+[workspace]
+members = ["applet", "captions"]
+resolver = "3"
+
+[profile.release]
+lto = "thin"
