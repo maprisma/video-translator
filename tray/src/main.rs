@@ -307,7 +307,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     let (tx, mut rx) = mpsc::unbounded_channel();
     let connection = zbus::connection::Builder::session()?
-        .name("com.maprisma.VideoTranslator.Tray")?
         .serve_at(
             "/StatusNotifierItem",
             Tray {
@@ -324,6 +323,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?
         .build()
         .await?;
+    // One tray per session: a second one ends here (zbus would otherwise
+    // queue the name request and keep running, with a second caption helper).
+    if connection.request_name_with_flags("com.maprisma.VideoTranslator.Tray", zbus::fdo::RequestNameFlags::DoNotQueue.into()).await.is_err() {
+        return Ok(());
+    }
     let _captions = tokio::spawn(run_captions());
     // Checking the unique owner also handles Plasma starting after us and watcher restarts.
     let watcher_connection = connection.clone();
