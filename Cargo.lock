@@ -3220,6 +3220,7 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "libcosmic",
+ "maprisma-video-translator-control",
  "serde_json",
  "tokio",
 ]
@@ -3232,6 +3233,25 @@ dependencies = [
  "libcosmic",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "maprisma-video-translator-control"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "maprisma-video-translator-tray"
+version = "0.1.0"
+dependencies = [
+ "maprisma-video-translator-control",
+ "serde_json",
+ "tokio",
+ "zbus",
 ]
 
 [[package]]

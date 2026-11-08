@@ -18,7 +18,8 @@ else
   echo "Kept existing $launcher (not managed by Maprisma Video Translator); desktop actions need the video-trans command."
 fi
 if [[ ! -e "$desktop" && ! -L "$desktop" ]] || { [[ -f "$desktop" && ! -L "$desktop" ]] && grep -qxF 'X-Video-Trans-Managed=true' "$desktop"; }; then
-  install -m 644 "$source_dir/video-trans.desktop" "$desktop.tmp"
+  python3 "$source_dir/desktop-exec.py" "$source_dir/video-trans.desktop" "$launcher" > "$desktop.tmp"
+  chmod 644 "$desktop.tmp"
   mv -f "$desktop.tmp" "$desktop"
 else
   echo "Kept existing $desktop (not managed by Maprisma Video Translator)."

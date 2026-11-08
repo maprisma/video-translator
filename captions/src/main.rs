@@ -136,7 +136,18 @@ fn ppm_luminance(data: &[u8]) -> Option<f64> {
     Some(sum / (255.0 * (width * height) as f64))
 }
 
+// A failed capture disables sampling for this helper's lifetime. KWin has layer-shell
+// but no wlr-screencopy; avoid even the first grim process there.
+fn sampling_available() -> bool {
+    !std::env::var("XDG_CURRENT_DESKTOP")
+        .unwrap_or_default()
+        .to_ascii_uppercase()
+        .contains("KDE")
+}
 async fn sample(region: Rectangle) -> Option<f64> {
+    if !sampling_available() {
+        return None;
+    }
     let geometry = format!(
         "{},{} {}x{}",
         region.x.round() as i32,
@@ -150,8 +161,12 @@ async fn sample(region: Rectangle) -> Option<f64> {
         .stderr(Stdio::null())
         .kill_on_drop(true)
         .output();
-    let out = tokio::time::timeout(Duration::from_secs(3), run).await.ok()?.ok()?;
-    out.status.success().then(|| ppm_luminance(&out.stdout)).flatten()
+    match tokio::time::timeout(Duration::from_secs(3), run).await {
+        Ok(Ok(out)) if out.status.success() => ppm_luminance(&out.stdout),
+        // Tried again next time (a failure while outputs change passes);
+        // desktops grim cannot capture at all never get here (see above).
+        _ => None,
+    }
 }
 
 fn rgb(hex: &str) -> Color {
@@ -172,7 +187,18 @@ fn number(view: &Value, key: &str) -> Option<f64> {
 }
 
 fn theme_color(view: &Value, key: &str) -> Color {
-    rgb(view.get("theme").and_then(|t| t.get(key)).and_then(Value::as_str).unwrap_or(""))
+    if view.get("text_color").and_then(Value::as_str) == Some("auto") && !sampling_available() {
+        match key {
+            "foreground" => return Color::WHITE,
+            "background" => return Color::BLACK,
+            _ => {}
+        }
+    }
+    rgb(view
+        .get("theme")
+        .and_then(|t| t.get(key))
+        .and_then(Value::as_str)
+        .unwrap_or(""))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -606,7 +632,7 @@ impl cosmic::Application for Captions {
             }
             Message::Sample => {
                 let auto = self.view.get("text_color").and_then(Value::as_str) == Some("auto");
-                if self.sampling || !auto || self.drag.is_some() {
+                if self.sampling || !auto || self.drag.is_some() || !sampling_available() {
                     return Task::none();
                 }
                 if let Some(region) = self.sample_region() {

@@ -194,6 +194,15 @@ class BridgeOfflineTests(unittest.TestCase):
         self.assertEqual((settings['target'], settings['font_size']), ('French', 30))
         self.assertNotIn('evil', settings)
 
+class DesktopPackageTests(unittest.TestCase):
+    def test_kde_does_not_require_grim(self):
+        with patch.dict(os.environ, XDG_CURRENT_DESKTOP='KDE'), patch.object(readiness.shutil, 'which', return_value=None):
+            self.assertEqual(readiness.missing_packages(), ['ffmpeg', 'libpulse', 'uv'])
+
+    def test_cosmic_still_requires_grim(self):
+        with patch.dict(os.environ, XDG_CURRENT_DESKTOP='COSMIC'), patch.object(readiness.shutil, 'which', return_value=None):
+            self.assertIn('grim', readiness.missing_packages())
+
 
 if __name__ == '__main__':
     unittest.main()

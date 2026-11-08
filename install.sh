@@ -15,11 +15,12 @@ flutter="${FLUTTER:-/mnt/Data/flutter/bin/flutter}"
 
 if command -v cargo >/dev/null; then
   cargo build --release
-elif [[ ! -x target/release/maprisma-video-translator-applet || ! -x target/release/maprisma-video-translator-captions ]]; then
+elif [[ ! -x target/release/maprisma-video-translator-applet || ! -x target/release/maprisma-video-translator-captions || ! -x target/release/maprisma-video-translator-tray ]]; then
   echo "cargo not found and prebuilt binaries are missing in target/release." >&2
   exit 1
 fi
 install -Dm755 target/release/maprisma-video-translator-applet "$bin/maprisma-video-translator-applet"
+install -Dm755 target/release/maprisma-video-translator-tray "$bin/maprisma-video-translator-tray"
 install -Dm755 target/release/maprisma-video-translator-captions "$bin/maprisma-video-translator-captions"
 
 mkdir -p "$data/maprisma-video-translator"
@@ -35,7 +36,7 @@ if command -v cmake >/dev/null && command -v ninja >/dev/null && [[ -x $flutter 
   cp -r app/build/linux/x64/release/bundle "$data/maprisma-video-translator/app"
   ln -sf "$data/maprisma-video-translator/app/maprisma-video-translator" "$bin/maprisma-video-translator"
   mkdir -p "$data/applications"
-  sed "s|^Exec=.*|Exec=$bin/maprisma-video-translator|" data/com.maprisma.VideoTranslator.desktop \
+  python3 backend/desktop-exec.py data/com.maprisma.VideoTranslator.desktop "$bin/maprisma-video-translator" \
     > "$data/applications/com.maprisma.VideoTranslator.desktop"
 else
   echo "Maprisma Video Translator window skipped: needs cmake, ninja and flutter ($flutter)." >&2
@@ -43,8 +44,12 @@ fi
 
 # The panel starts applets without ~/.local/bin in PATH: the full path.
 mkdir -p "$data/applications"
-sed "s|^Exec=.*|Exec=$bin/maprisma-video-translator-applet|" data/io.github.ubruckhaus.CosmicMaprismaVideoTranslator.desktop \
+python3 backend/desktop-exec.py data/io.github.ubruckhaus.CosmicMaprismaVideoTranslator.desktop "$bin/maprisma-video-translator-applet" \
   > "$data/applications/io.github.ubruckhaus.CosmicMaprismaVideoTranslator.desktop"
+autostart="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+mkdir -p "$autostart"
+python3 backend/desktop-exec.py data/com.maprisma.VideoTranslator.Tray.desktop "$bin/maprisma-video-translator-tray" \
+  > "$autostart/com.maprisma.VideoTranslator.Tray.desktop"
 # An existing video-trans command follows the newly installed backend.
 if [[ -f $bin/video-trans ]] && grep -qxF '# Managed by ubruckhaus.video-trans' "$bin/video-trans"; then
   bash "$data/maprisma-video-translator/backend/install-shortcuts.sh" >/dev/null

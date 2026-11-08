@@ -46,7 +46,9 @@ def status_path():
 
 
 def missing_packages():
-    return [package for command, package in PACKAGES.items() if not shutil.which(command)]
+    kde = 'KDE' in os.environ.get('XDG_CURRENT_DESKTOP', '').upper()
+    return [package for command, package in PACKAGES.items()
+            if not (kde and command == 'grim') and not shutil.which(command)]
 
 
 def runtime_ready():
