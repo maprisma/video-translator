@@ -402,7 +402,10 @@ mod tests {
         assert_eq!(Variant::new(tree).value_signature().to_string(), "(ia{sv}av)");
         assert!(layout(&menu, 0, &[]).2.is_empty());
         assert!(!layout(&menu, 1, &[]).2.is_empty());
-        let filtered = properties(menu.find(12).unwrap(), &["toggle-state".into()]);
+        // The menu has no check items now; the property code still supports them.
+        let mut check = menu.find(2).unwrap().clone();
+        check.selected = Some(true);
+        let filtered = properties(&check, &["toggle-state".into()]);
         assert_eq!(filtered.len(), 1);
         assert_eq!(i32::try_from(filtered["toggle-state"].try_clone().unwrap()).unwrap(), 1);
     }

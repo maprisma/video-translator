@@ -76,10 +76,6 @@ pub fn menu(state: &Value, busy: bool) -> Item {
             .any(|s| string(s, "id") == "runtime" && !flag(s, "ok"));
     let ready = loaded && !steps.is_empty() && steps.iter().all(|s| flag(s, "ok"));
     let running = flag(state, "running");
-    let locked = running
-        || ["starting", "downloading", "stopping"]
-            .iter()
-            .any(|k| flag(state, k));
     let control = |id, label, action, enabled| {
         Item::new(id, label, enabled && !busy, vec![json!({"action":action})])
     };
@@ -119,79 +115,11 @@ pub fn menu(state: &Value, busy: bool) -> Item {
     if flag(state, "downloading") {
         items.push(control(6, "Cancel download", "cancel-download", true));
     }
+    // Language, input, following and font size live in the settings window.
     if loaded {
-        let target = setting(state, "target")
-            .and_then(Value::as_str)
-            .unwrap_or("German");
-        let input = setting(state, "audio_input")
-            .and_then(Value::as_str)
-            .unwrap_or("Audio output");
-        let mut languages = Item::new(
-            10,
-            format!("Translate into · {target}"),
-            !locked && !busy,
-            vec![],
-        );
-        for (i, lang) in LANGUAGES.iter().enumerate() {
-            let mut item = Item::new(
-                100 + i as i32,
-                *lang,
-                !locked && !busy && *lang != target,
-                vec![json!({"action":"configure","settings":{"target":lang}})],
-            );
-            item.selected = Some(*lang == target);
-            languages.children.push(item);
-        }
-        items.push(languages);
-        let mut inputs = Item::new(
-            11,
-            format!("Listen to · {input}"),
-            runtime && !locked && !busy,
-            vec![],
-        );
-        for (i, (value, label)) in INPUTS.iter().enumerate() {
-            let mut item = Item::new(
-                200 + i as i32,
-                *label,
-                runtime && !locked && !busy && *value != input,
-                vec![
-                    json!({"action":"configure","settings":{"audio_input":value,"output":""}}),
-                    json!({"action":"outputs"}),
-                ],
-            );
-            item.selected = Some(*value == input);
-            inputs.children.push(item);
-        }
-        items.push(inputs);
-        let follow = setting(state, "auto_scroll").and_then(Value::as_bool) != Some(false);
-        let mut item = Item::new(
-            12,
-            "Follow new captions",
-            true,
-            vec![json!({"action":"configure","settings":{"auto_scroll":!follow}})],
-        );
-        item.selected = Some(follow);
-        items.push(item);
-        let font = setting(state, "font_size")
-            .and_then(Value::as_f64)
-            .unwrap_or(24.0)
-            .clamp(12.0, 64.0)
-            .round() as i32;
-        let mut fonts = Item::new(13, format!("Caption font size · {font} pt"), true, vec![]);
-        for size in 12..=64 {
-            let mut item = Item::new(
-                300 + size,
-                format!("{size} pt"),
-                true,
-                vec![json!({"action":"configure","settings":{"font_size":size}})],
-            );
-            item.selected = Some(size == font);
-            fonts.children.push(item);
-        }
-        items.push(fonts);
         items.push(control(14, "Clear captions", "clear", runtime));
     }
-    let mut open = Item::new(15, "Open Maprisma Video Translator…", true, vec![]);
+    let mut open = Item::new(15, "Settings…", true, vec![]);
     open.action = Some(Action {
         requests: vec![],
         window: true,
@@ -224,28 +152,21 @@ mod tests {
         let m = menu(&state, false);
         assert!(m.activate(2).is_none());
         assert!(m.activate(3).is_some());
-        assert!(m.activate(101).is_none());
         assert!(menu(&ready(), true).activate(2).is_none());
     }
     #[test]
     fn settings_and_fixes() {
         let mut state = ready();
         let m = menu(&state, false);
+        // Only the controls and Settings…: the options are in the window.
+        let labels: Vec<_> = m.children.iter().map(|i| i.label.as_str()).collect();
         assert_eq!(
-            m.activate(201).unwrap().requests,
-            vec![
-                json!({"action":"configure","settings":{"audio_input":"Microphone","output":""}}),
-                json!({"action":"outputs"})
-            ]
+            labels[1..],
+            ["Start", "Stop", "Captions", "Clear captions", "Settings…"]
         );
-        assert_eq!(
-            m.activate(12).unwrap().requests[0]["settings"]["auto_scroll"],
-            false
-        );
-        assert_eq!(
-            m.activate(332).unwrap().requests[0]["settings"]["font_size"],
-            32
-        );
+        for id in [10, 11, 12, 13, 101, 201, 332] {
+            assert!(m.find(id).is_none());
+        }
         assert!(m.activate(15).unwrap().window);
         assert!(m.activate(-1).is_none());
         state["steps"] = json!([{"id":"provider","ok":false,"problem":"Key needed","fixes":[{"label":"Enter key","panel":"provider","settings":{"provider":"Online"}}]}]);
