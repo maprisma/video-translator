@@ -2,6 +2,7 @@
 # Build and install Maprisma Video Translator for the current user (no root needed):
 #   ~/.local/bin/maprisma-video-translator-applet     the panel applet (subtitles icon)
 #   ~/.local/bin/maprisma-video-translator-captions          the caption window (the applet keeps it running)
+#   ~/.local/share/icons/hicolor/scalable/apps/…svg   the bar icon (its own name)
 #   ~/.local/bin/maprisma-video-translator                   the Maprisma Video Translator window (Flutter)
 #   ~/.local/share/maprisma-video-translator/backend/ the caption controller; "Set up now" in the menu
 #                                                   installs its private runtime and the video-trans command
@@ -22,6 +23,10 @@ fi
 install -Dm755 target/release/maprisma-video-translator-applet "$bin/maprisma-video-translator-applet"
 install -Dm755 target/release/maprisma-video-translator-tray "$bin/maprisma-video-translator-tray"
 install -Dm755 target/release/maprisma-video-translator-captions "$bin/maprisma-video-translator-captions"
+# The bar icon (applet and tray) has a name of its own, so it can be changed without touching a theme.
+icon=io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic
+install -Dm644 "data/icons/$icon.svg" "$data/icons/hicolor/scalable/apps/$icon.svg"
+gtk-update-icon-cache -q -t "$data/icons/hicolor" 2>/dev/null || true
 
 mkdir -p "$data/maprisma-video-translator"
 rm -rf "$data/maprisma-video-translator/backend.new"

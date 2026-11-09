@@ -12,7 +12,7 @@ use zbus::{
 type Props = HashMap<String, OwnedValue>;
 type Layout = (i32, Props, Vec<OwnedValue>);
 type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
-const ICON: &str = "media-view-subtitles-symbolic";
+const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
 struct State {
     value: Value,
     busy: bool,

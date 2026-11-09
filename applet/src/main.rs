@@ -26,7 +26,7 @@ use serde_json::{Value, json};
 use maprisma_video_translator_control::*;
 
 const APP_ID: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator";
-const ICON: &str = "media-view-subtitles-symbolic";
+const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
 const POPUP_WIDTH: f32 = 360.0;
 const FONT: (f32, f32) = (12.0, 64.0);
 static AUTOSIZE_ID: LazyLock<Id> = LazyLock::new(|| Id::new("maprisma-video-translator-autosize"));

@@ -3,6 +3,6 @@ Type=Application
 Name=Maprisma Video Translator Tray
 Comment=Live translated captions in the KDE system tray
 Exec=maprisma-video-translator-tray
-Icon=media-view-subtitles-symbolic
+Icon=io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic
 Terminal=false
 OnlyShowIn=KDE;
