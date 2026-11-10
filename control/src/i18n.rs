@@ -30,6 +30,19 @@ fn settings_path() -> PathBuf {
         .unwrap_or_else(|| crate::home().join(".config"));
     config.join("maprisma-video-translator/interface.json")
 }
+/// Settings › F12 saves a screenshot (on unless `"screenshot_key": false`) and › Corners
+/// (`"corners"`: "desktop", "slight", "rounded", "square"), set in the window, kept in the same
+/// file as the language.
+pub fn look_settings() -> (bool, String) {
+    let saved = std::fs::read_to_string(settings_path())
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .unwrap_or(Value::Null);
+    (
+        saved.get("screenshot_key").and_then(Value::as_bool) != Some(false),
+        saved.get("corners").and_then(Value::as_str).unwrap_or("").to_string(),
+    )
+}
 pub fn language() -> String {
     let selected = std::fs::read_to_string(settings_path())
         .ok()

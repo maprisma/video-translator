@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import 'bridge.dart';
 import 'i18n.dart';
+import 'look.dart';
 import 'widgets.dart';
 
 /// A number as JavaScript prints it (800, not 800.0).
@@ -191,7 +192,35 @@ class _TranslatorPageState extends State<TranslatorPage> {
         catch (error) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(trf('Could not save language setting: {0}', [error])))); }
       },
     )]),
+    ..._lookRows(),
   ]);
+
+  /// Settings › Corners and F12 saves a screenshot (look.dart; the applet and tray read them too).
+  List<Widget> _lookRows() {
+    final desktop = desktopRadius(Theme.of(context).brightness);
+    void save(void Function() write) {
+      try {
+        write();
+        setState(() {});
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+
+    return [
+      PrefRow(title: tr('Corners'), suffixes: [ChoiceButton(
+        title: tr('Corners'),
+        options: [for (final choice in cornerChoices) (choice, cornerLabel(choice, desktop))],
+        value: look.value.corners,
+        onPick: (value) => save(() => saveLook(corners: value)),
+      )]),
+      SwitchPrefRow(
+        title: tr('F12 saves a screenshot'),
+        value: look.value.screenshotKey,
+        onChanged: (on) => save(() => saveLook(screenshotKey: on)),
+      ),
+    ];
+  }
 
   Widget _statusGroup() {
     final theme = Theme.of(context);

@@ -3216,11 +3216,12 @@ dependencies = [
 
 [[package]]
 name = "maprisma-video-translator-applet"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "libc",
  "libcosmic",
  "maprisma-video-translator-control",
+ "png 0.18.1",
  "serde_json",
  "tokio",
 ]
@@ -3238,7 +3239,7 @@ dependencies = [
 
 [[package]]
 name = "maprisma-video-translator-control"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "libc",
  "serde_json",

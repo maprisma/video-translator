@@ -24,10 +24,17 @@ use cosmic::widget::{
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
 use maprisma_video_translator_control::*;
+mod corners;
+mod shot;
+mod shot_files;
+use corners::{Corners, Look};
+use shot::{Shot, ShotMsg};
 
 const APP_ID: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator";
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
 const POPUP_WIDTH: f32 = 360.0;
+/// F12's folder in ~/Pictures and (as a slug) its file names (the window's too).
+const SHOT_FOLDER: &str = "Maprisma Video Translator";
 const FONT: (f32, f32) = (12.0, 64.0);
 static AUTOSIZE_ID: LazyLock<Id> = LazyLock::new(|| Id::new("maprisma-video-translator-autosize"));
 
@@ -83,10 +90,15 @@ struct Translator {
     font: Option<f32>, // while the slider is being moved
     busy: usize,       // requests on their way
     expanded: Option<Section>,
+    shot: Shot,
+    look: Look,
+    corners: Corners,
+    screenshot_key: bool,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
+    Shot(ShotMsg),
     Poll,
     Brief(Option<Value>),
     State(Value),
@@ -269,10 +281,20 @@ impl Translator {
             .into()
     }
 
+    fn read_look(&mut self) -> Task<Message> {
+        let (screenshot_key, corners) = i18n::look_settings();
+        self.screenshot_key = screenshot_key;
+        self.corners = Corners::parse(&corners);
+        self.look.apply(&self.core, self.corners)
+    }
+
     fn close_popup(&mut self) -> Task<Message> {
         self.expanded = None;
         match self.popup.take() {
-            Some(popup) => Task::batch([destroy_popup(popup), self.release()]),
+            Some(popup) => {
+                self.shot.closed(popup);
+                Task::batch([destroy_popup(popup), self.release()])
+            }
             None => Task::none(),
         }
     }
@@ -308,7 +330,9 @@ impl cosmic::Application for Translator {
     }
 
     fn init(core: Core, _flags: ()) -> (Self, Task<Message>) {
-        (Self { core, ..Default::default() }, Task::done(cosmic::Action::App(Message::Poll)))
+        let mut app = Self { core, shot: Shot::new(SHOT_FOLDER), ..Default::default() };
+        let look = app.read_look();
+        (app, Task::batch([look, Task::done(cosmic::Action::App(Message::Poll))]))
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
@@ -319,6 +343,7 @@ impl cosmic::Application for Translator {
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
             cosmic::iced::time::every(Duration::from_millis(1500)).map(|_| Message::Poll),
+            Shot::subscription().map(Message::Shot),
             Subscription::run_with("maprisma-video-translator-captions", |_| {
                 stream::channel(1, |_output: cosmic::iced::futures::channel::mpsc::Sender<Message>| async move {
                     run_captions().await;
@@ -331,15 +356,27 @@ impl cosmic::Application for Translator {
         match message {
             // Light poll for the icon; while the menu is open the full state instead.
             Message::Poll => {
+                let look = self.read_look();
                 if self.popup.is_some() {
                     if self.busy == 0 {
-                        return Task::perform(request(json!({"action": "state"})), |s| {
+                        let state = Task::perform(request(json!({"action": "state"})), |s| {
                             cosmic::Action::App(Message::State(s))
                         });
+                        return Task::batch([look, state]);
                     }
                 } else {
-                    return Task::perform(brief(), |s| cosmic::Action::App(Message::Brief(s)));
+                    let brief = Task::perform(brief(), |s| cosmic::Action::App(Message::Brief(s)));
+                    return Task::batch([look, brief]);
                 }
+                return look;
+            }
+            Message::Shot(message) => {
+                // F12 takes the open popup, not the panel button.
+                let ours = match &message {
+                    ShotMsg::Key(id) => self.popup == Some(*id),
+                    _ => true,
+                };
+                return self.shot.update(message, self.screenshot_key, ours, Message::Shot);
             }
             Message::Brief(state) => self.running = state.is_some_and(|s| flag(&s, "running")),
             Message::State(state) => {
@@ -400,6 +437,7 @@ impl cosmic::Application for Translator {
                 RectangleUpdate::Init(tracker) => self.tracker = Some(tracker),
             },
             Message::CloseRequested(id) => {
+                self.shot.closed(id);
                 if self.popup == Some(id) {
                     self.popup = None;
                     self.expanded = None;
@@ -453,8 +491,16 @@ impl cosmic::Application for Translator {
         autosize::autosize(content, AUTOSIZE_ID.clone()).into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
-        self.core.applet.popup_container(self.menu()).into()
+    fn view_window(&self, id: window::Id) -> Element<'_, Message> {
+        let content = match self.shot.card(id, Message::Shot) {
+            Some(card) => column![card, self.menu()].width(Length::Fixed(POPUP_WIDTH)).into(),
+            None => self.menu(),
+        };
+        self.core.applet.popup_container(content).into()
+    }
+
+    fn system_theme_update(&mut self, _keys: &[&'static str], _theme: &cosmic::cosmic_theme::Theme) -> Task<Message> {
+        self.look.apply(&self.core, self.corners)
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {

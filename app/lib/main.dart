@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'bridge.dart';
 import 'i18n.dart';
 import 'desktop_theme.dart';
+import 'look.dart';
+import 'shot.dart';
 import 'translator_page.dart';
 
 void main() {
@@ -34,19 +36,26 @@ class _TranslatorAppState extends State<TranslatorApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Color?>(
-      valueListenable: _desktop.accent,
-      builder: (context, accent, _) => MaterialApp(
-        title: tr('Maprisma Video Translator'),
-        debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.system,
-        theme: DesktopTheme.theme(Brightness.light, accent),
-        darkTheme: DesktopTheme.theme(Brightness.dark, accent),
-        builder: (context, child) {
-          _desktop.syncHeader(Theme.of(context));
-          return child!;
-        },
-        home: TranslatorPage(bridge: widget.bridge),
+    return ValueListenableBuilder<LookSettings>(
+      valueListenable: look,
+      builder: (context, settings, _) => ValueListenableBuilder<Color?>(
+        valueListenable: _desktop.accent,
+        builder: (context, accent, _) => MaterialApp(
+          title: tr('Maprisma Video Translator'),
+          debugShowCheckedModeBanner: false,
+          navigatorKey: shotNavigator,
+          scaffoldMessengerKey: shotMessenger,
+          themeMode: ThemeMode.system,
+          theme: DesktopTheme.theme(Brightness.light, accent,
+              radius: cornerRadius(settings.corners, desktopRadius(Brightness.light))),
+          darkTheme: DesktopTheme.theme(Brightness.dark, accent,
+              radius: cornerRadius(settings.corners, desktopRadius(Brightness.dark))),
+          builder: (context, child) {
+            _desktop.syncHeader(Theme.of(context));
+            return ShotScope(child: child!);
+          },
+          home: TranslatorPage(bridge: widget.bridge),
+        ),
       ),
     );
   }

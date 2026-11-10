@@ -49,6 +49,8 @@ void main() {
     await pump(tester, bridge);
     expect(find.text('Ready'), findsOneWidget);
     expect(find.text('Not ready yet'), findsNothing);
+    expect(find.text('Corners'), findsOneWidget);
+    expect(find.text('F12 saves a screenshot'), findsOneWidget);
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
     expect(bridge.sent.last, {'action': 'start'});

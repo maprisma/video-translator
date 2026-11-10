@@ -56,11 +56,25 @@ For live verification: check login autostart, all three mouse buttons, menu sett
 
 | Data | Location |
 | --- | --- |
-| Interface language | `~/.config/maprisma-video-translator/interface.json` (respects `XDG_CONFIG_HOME`) |
+| Interface language, F12 and Corners settings | `~/.config/maprisma-video-translator/interface.json` (respects `XDG_CONFIG_HOME`) |
+| F12 screenshots and notes (only when you press F12) | `~/Pictures/Maprisma Video Translator/` |
 | Settings | `~/.config/video-trans/settings.json` |
 | Saved API keys (optional, owner-only) | `~/.config/video-trans/credentials.json` |
 | Python runtime | `~/.local/share/video-trans/runtime/` |
 | Whisper models | `~/.cache/huggingface/hub/` |
+
+## F12: a screenshot with a note
+
+While the panel popup or the Maprisma Video Translator window has the keyboard, **F12** (without Ctrl, Shift, Alt or Super) saves a picture of it, for telling what is wrong with it, as in the other Maprisma apps:
+
+- **Only on F12, and only that popup or window.** The popup is drawn once more by iced into the picture (`window::screenshot`, encoded as PNG in the applet), the window by Flutter (`RepaintBoundary.toImage`, dialogs included). No screenshot program runs (the caption colour sampling with `grim` is not involved), nothing else on the screen is in it, and nothing is uploaded or sent anywhere. Not captured: the caption window (an overlay that never takes the keyboard, `KeyboardInteractivity::None`, so F12 cannot reach it) and the KDE tray's menu (drawn by Plasma).
+- **Where:** `~/Pictures/Maprisma Video Translator/maprisma-video-translator-<date>-<time>.png`. The pictures folder comes from `~/.config/user-dirs.dirs` when it is set there (read only as a regular file of at most 64 KiB, never through a link). The app then names the file and asks **What is wrong? (optional)**; **Enter** or **Done** saves the text next to the picture as a `.txt` with the same name (at most 4000 characters; no text, no file), **Esc** skips it, and closing the popup keeps what was typed. F12 waits until that is closed.
+- **Private files:** the folder is made `0700` when missing and only used when it is a real folder of yours (not a link) that no one else can write to, checked on the opened folder; pictures and notes are new `0600` files made inside that folder, never through a link and never over an existing file (`-2`, `-3` … are added instead, also when only a note has the name), synced to disk, and removed again when they cannot be written completely.
+- **Off:** switch **F12 saves a screenshot** off in the window (next to Language); stored as `"screenshot_key": false` in `interface.json` (below); the applet picks it up on its next refresh.
+
+## Corners
+
+**Corners** in the window (next to Language): *Like the desktop (N px)* (the default: COSMIC's window corners, the theme's small radius plus 4 px as libcosmic rounds windows; 12 px where there is no COSMIC theme, e.g. on KDE), *Slightly rounded (6 px)*, *Rounded (12 px)* or *Square*. Popups, cards, the note card and drop-down menus take the full radius; buttons, drop-downs and text fields at most 8 px; small parts (bars and their tracks, slider tracks, check boxes) at most 4 px; round dots stay round, or square in *Square*. In the applet's popup: libcosmic's widgets take their corners from the theme, so the popup runs on a copy of the desktop's COSMIC theme with these corners (made again when the desktop's theme changes). libcosmic draws toggle switches and progress bars with the same theme slot as buttons, so they get the button corners (at most 8 px) rather than pills; slider knobs take the full radius. The panel button keeps the panel's look. In the window: cards and dialogs at the full radius, buttons and choice buttons at most 8 px, check boxes at most 4 px; Material's switches stay pills, and the borderless text fields have no corners. The caption window keeps its own look. Stored as `"corners"` (`desktop`, `slight`, `rounded`, `square`) in `interface.json`; a file without it stays valid and means *Like the desktop*.
 
 ## Interface languages
 
