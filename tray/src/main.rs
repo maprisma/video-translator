@@ -17,6 +17,7 @@ struct State {
     value: Value,
     busy: bool,
     revision: u32,
+    language: String,
 }
 type Shared = Arc<Mutex<State>>;
 #[derive(Clone)]
@@ -188,8 +189,8 @@ impl Tray {
         "maprisma-video-translator"
     }
     #[zbus(property)]
-    fn title(&self) -> &str {
-        "Maprisma Video Translator"
+    fn title(&self) -> String {
+        tr("Maprisma Video Translator")
     }
     #[zbus(property)]
     async fn status(&self) -> &str {
@@ -236,7 +237,7 @@ impl Tray {
         (
             ICON.into(),
             vec![],
-            "Maprisma Video Translator".into(),
+            tr("Maprisma Video Translator"),
             model::status(&self.state.lock().await.value),
         )
     }
@@ -278,7 +279,9 @@ async fn publish(
     let old_status = flag(&s.value, "running");
     s.value = value;
     s.busy = busy;
-    let changed = before != model::menu(&s.value, s.busy);
+    let language = i18n::language();
+    let changed = s.language != language || before != model::menu(&s.value, s.busy);
+    s.language = language;
     if changed {
         s.revision = s.revision.wrapping_add(1);
     }
@@ -304,6 +307,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         value: Value::Null,
         busy: false,
         revision: 1,
+            language: i18n::language(),
     }));
     let (tx, mut rx) = mpsc::unbounded_channel();
     let connection = zbus::connection::Builder::session()?
@@ -415,6 +419,7 @@ mod tests {
         let state = Arc::new(Mutex::new(State {
             value: json!({"settings":{},"steps":[{"id":"runtime","ok":true}]}),
             busy: false, revision: 1,
+            language: i18n::language(),
         }));
         let (tx, mut rx) = mpsc::unbounded_channel();
         let menu = Menu { state, tx };

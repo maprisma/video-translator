@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import 'bridge.dart';
+import 'i18n.dart';
 import 'desktop_theme.dart';
 import 'translator_page.dart';
 
@@ -36,7 +37,7 @@ class _TranslatorAppState extends State<TranslatorApp> {
     return ValueListenableBuilder<Color?>(
       valueListenable: _desktop.accent,
       builder: (context, accent, _) => MaterialApp(
-        title: 'Maprisma Video Translator',
+        title: tr('Maprisma Video Translator'),
         debugShowCheckedModeBanner: false,
         themeMode: ThemeMode.system,
         theme: DesktopTheme.theme(Brightness.light, accent),

@@ -1,7 +1,21 @@
 [Desktop Entry]
 Type=Application
 Name=Maprisma Video Translator Tray
+Name[de]=Maprisma Video Translator – Systemleiste
+Name[fr]=Maprisma Video Translator – zone de notification
+Name[es]=Maprisma Video Translator – bandeja del sistema
+Name[it]=Maprisma Video Translator – area di notifica
+Name[pt]=Maprisma Video Translator – área de notificação
+Name[nl]=Maprisma Video Translator – systeemvak
+Name[pl]=Maprisma Video Translator – zasobnik systemowy
 Comment=Live translated captions in the KDE system tray
+Comment[de]=Live übersetzte Untertitel in der KDE-Systemleiste
+Comment[fr]=Sous-titres traduits en direct dans la zone de notification KDE
+Comment[es]=Subtítulos traducidos en directo en la bandeja del sistema KDE
+Comment[it]=Sottotitoli tradotti in tempo reale nell'area di notifica KDE
+Comment[pt]=Legendas traduzidas em direto na área de notificação do KDE
+Comment[nl]=Live vertaalde ondertitels in het KDE-systeemvak
+Comment[pl]=Napisy tłumaczone na żywo w zasobniku systemowym KDE
 Exec=maprisma-video-translator-tray
 Icon=io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic
 Terminal=false

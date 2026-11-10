@@ -385,6 +385,7 @@ impl Captions {
                 .filter(|s| !s.is_empty())
                 .unwrap_or("Starting captions…")
                 .to_string();
+            text = maprisma_video_translator_control::tr(&text);
         }
         if text != self.text {
             self.text = text;

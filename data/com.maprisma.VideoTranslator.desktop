@@ -1,6 +1,20 @@
 [Desktop Entry]
 Name=Maprisma Video Translator
+Name[de]=Maprisma Video Translator
+Name[fr]=Maprisma Video Translator
+Name[es]=Maprisma Video Translator
+Name[it]=Maprisma Video Translator
+Name[pt]=Maprisma Video Translator
+Name[nl]=Maprisma Video Translator
+Name[pl]=Maprisma Video Translator
 Comment=Live translated captions over any video, call or microphone
+Comment[de]=Live übersetzte Untertitel für Videos, Anrufe und Mikrofon
+Comment[fr]=Sous-titres traduits en direct pour toute vidéo, tout appel ou microphone
+Comment[es]=Subtítulos traducidos en directo para vídeos, llamadas o micrófonos
+Comment[it]=Sottotitoli tradotti in tempo reale per video, chiamate o microfono
+Comment[pt]=Legendas traduzidas em direto para vídeos, chamadas ou microfone
+Comment[nl]=Live vertaalde ondertitels voor video, gesprekken of microfoon
+Comment[pl]=Napisy tłumaczone na żywo do filmów, rozmów i mikrofonu
 Type=Application
 Exec=maprisma-video-translator
 Icon=media-view-subtitles-symbolic

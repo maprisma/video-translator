@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'i18n.dart';
 
 typedef Json = Map<String, dynamic>;
 
@@ -13,26 +14,26 @@ const languages = [
   'German', 'English', 'French', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Polish', 'Ukrainian', 'Russian',
   'Japanese', 'Chinese', 'Korean', 'Arabic', 'Hindi', 'Turkish', 'Indonesian', 'Vietnamese',
 ];
-const inputs = [
-  ('Audio output', 'Audio output · what you hear (video, calls)'),
-  ('Microphone', 'Microphone · speech in the room'),
+List<(String, String)> get inputs => [
+  ('Audio output', tr('Audio output · what you hear (video, calls)')),
+  ('Microphone', tr('Microphone · speech in the room')),
 ];
-const whisperModels = [
-  ('tiny', 'Tiny · 75 MB · fastest'),
-  ('base', 'Base · 145 MB'),
-  ('small', 'Small · 480 MB · recommended'),
-  ('medium', 'Medium · 1.5 GB'),
-  ('large-v3', 'Large v3 · 3 GB · most accurate'),
-  ('turbo', 'Turbo · 1.6 GB · large and fast'),
+List<(String, String)> get whisperModels => [
+  ('tiny', tr('Tiny · 75 MB · fastest')),
+  ('base', tr('Base · 145 MB')),
+  ('small', tr('Small · 480 MB · recommended')),
+  ('medium', tr('Medium · 1.5 GB')),
+  ('large-v3', tr('Large v3 · 3 GB · most accurate')),
+  ('turbo', tr('Turbo · 1.6 GB · large and fast')),
 ];
-const sources = [
-  ('auto', 'Detect automatically'), ('en', 'English'), ('de', 'German'), ('fr', 'French'), ('es', 'Spanish'),
-  ('it', 'Italian'), ('ja', 'Japanese'), ('zh', 'Chinese'), ('ko', 'Korean'), ('ru', 'Russian'), ('ar', 'Arabic'),
+List<(String, String)> get sources => [
+  ('auto', tr('Detect automatically')), ('en', tr('English')), ('de', tr('German')), ('fr', tr('French')), ('es', tr('Spanish')),
+  ('it', tr('Italian')), ('ja', tr('Japanese')), ('zh', tr('Chinese')), ('ko', tr('Korean')), ('ru', tr('Russian')), ('ar', tr('Arabic')),
 ];
-const providers = [
-  ('llama.cpp', 'llama.cpp · local'),
-  ('Ollama', 'Ollama · local'),
-  ('Online', 'Online · OpenAI-compatible server'),
+List<(String, String)> get providers => [
+  ('llama.cpp', tr('llama.cpp · local')),
+  ('Ollama', tr('Ollama · local')),
+  ('Online', tr('Online · OpenAI-compatible server')),
 ];
 const endpoints = {
   'llama.cpp': 'http://127.0.0.1:8080',
@@ -64,9 +65,9 @@ Json parseBridgeOutput(String out) {
   try {
     final value = jsonDecode(last.isEmpty ? '{}' : last);
     if (value is Map) return value.cast<String, dynamic>();
-    return {'error': 'Maprisma Video Translator: unexpected answer from the caption controller'};
+    return {'error': tr('Maprisma Video Translator: unexpected answer from the caption controller')};
   } on FormatException catch (error) {
-    return {'error': 'Maprisma Video Translator: ${error.message}'};
+    return {'error': trf('Maprisma Video Translator: {0}', [error.message])};
   }
 }
 
@@ -96,7 +97,7 @@ class Bridge {
       await process.exitCode;
       return parseBridgeOutput(out);
     } catch (error) {
-      return {'error': 'Maprisma Video Translator: ${error is ProcessException ? error.message : error}'};
+      return {'error': trf('Maprisma Video Translator: {0}', [error is ProcessException ? error.message : error])};
     }
   }
 }
@@ -135,26 +136,33 @@ Step? nextStep(Json state) {
   final setup = state['setup'] is Map ? state['setup'] as Map : const {};
   if (setup['busy'] == true) {
     final message = setup['message'];
-    return Step(text: message is String && message.isNotEmpty ? message : 'Setting up…', fixes: const []);
+    return Step(text: message is String && message.isNotEmpty ? message : tr('Setting up…'), fixes: const []);
   }
   final steps = state['steps'];
   if (steps is! List) return null;
   final failed = steps.whereType<Map>().where((step) => step['ok'] != true).firstOrNull;
   if (failed == null) return null;
   var problem = '${failed['problem'] ?? ''}';
-  if (setup['phase'] == 'error' && failed['id'] == 'runtime') problem = '${setup['message']} $problem';
+  if (setup['phase'] == 'error' && failed['id'] == 'runtime') problem = '${tr('${setup['message']}')} ${tr(problem)}';
   final fixes = [
     for (final fix in (failed['fixes'] is List ? failed['fixes'] as List : const []).whereType<Map>())
       Fix(
-        label: '${fix['label'] ?? ''}',
+        label: tr('${fix['label'] ?? ''}'),
         requests: fixRequests(fix),
         panel: fix['panel'] != null && fix['panel'] != false,
       ),
   ];
-  return Step(text: problem, fixes: fixes);
+  return Step(text: tr(problem), fixes: fixes);
 }
 
 /// Startup checks that failed ({id, label, status, detail}).
 List<Map> failedChecks(Json state) =>
     [for (final check in (state['checks'] is List ? state['checks'] as List : const []).whereType<Map>())
       if (check['status'] == 'error') check];
+
+/// Backend check details can be a bare model name or language value.
+String checkDetail(Map check, Json settings) {
+  final detail = '${check['detail'] ?? ''}';
+  if (['model', 'speech_model', 'target'].any((key) => settings[key] == detail)) return detail;
+  return tr(detail);
+}

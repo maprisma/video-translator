@@ -54,14 +54,15 @@ pub fn status(state: &Value) -> String {
         text = string(state, "status").to_owned();
     }
     if text.is_empty() {
-        text = "Maprisma Video Translator".into();
+        text = tr("Maprisma Video Translator");
     }
+    text = tr(&text);
     if let Some(checks) = state["checks"].as_array() {
         for c in checks.iter().filter(|c| string(c, "status") == "error") {
             text.push_str(&format!(
                 "\n✕ {}: {}",
-                string(c, "label"),
-                string(c, "detail")
+                tr(string(c, "label")),
+                check_detail(c, state)
             ));
         }
     }
@@ -83,7 +84,7 @@ pub fn menu(state: &Value, busy: bool) -> Item {
         Item::new(1, status(state), false, vec![]),
         control(
             2,
-            "Start",
+            tr("Start"),
             "start",
             ready
                 && !running
@@ -93,11 +94,11 @@ pub fn menu(state: &Value, busy: bool) -> Item {
         ),
         control(
             3,
-            "Stop",
+            tr("Stop"),
             "stop",
             (running || flag(state, "overlay")) && !flag(state, "stopping"),
         ),
-        control(4, "Captions", "show", runtime),
+        control(4, tr("Captions"), "show", runtime),
     ];
     if loaded {
         if let Some((problem, fixes)) = next_step(state) {
@@ -113,13 +114,13 @@ pub fn menu(state: &Value, busy: bool) -> Item {
         }
     }
     if flag(state, "downloading") {
-        items.push(control(6, "Cancel download", "cancel-download", true));
+        items.push(control(6, tr("Cancel download"), "cancel-download", true));
     }
     // Language, input, following and font size live in the settings window.
     if loaded {
-        items.push(control(14, "Clear captions", "clear", runtime));
+        items.push(control(14, tr("Clear captions"), "clear", runtime));
     }
-    let mut open = Item::new(15, "Settings…", true, vec![]);
+    let mut open = Item::new(15, tr("Settings…"), true, vec![]);
     open.action = Some(Action {
         requests: vec![],
         window: true,

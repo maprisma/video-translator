@@ -10,6 +10,7 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 
 import 'bridge.dart';
+import 'i18n.dart';
 import 'widgets.dart';
 
 /// A number as JavaScript prints it (800, not 800.0).
@@ -89,7 +90,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
     if (state['error'] != null) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('${state['error']}'), duration: const Duration(seconds: 6)));
+        ..showSnackBar(SnackBar(content: Text(tr('${state['error']}')), duration: const Duration(seconds: 6)));
     } else {
       _update(state);
     }
@@ -165,6 +166,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                 children: [
+                  _languageGroup(),
                   _statusGroup(),
                   ?_stepGroup(),
                   _listeningGroup(),
@@ -178,6 +180,18 @@ class _TranslatorPageState extends State<TranslatorPage> {
             ),
     );
   }
+
+  Widget _languageGroup() => PrefGroup(children: [
+    PrefRow(title: tr('Language'), suffixes: [ChoiceButton(
+      options: [('auto', trf('System ({0})', [languageNames[systemLanguage()]])),
+        ...languageNames.entries.map((e) => (e.key, e.value))],
+      value: interfaceLanguage,
+      onPick: (value) {
+        try { setInterfaceLanguage(value); setState(() {}); }
+        catch (error) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(trf('Could not save language setting: {0}', [error])))); }
+      },
+    )]),
+  ]);
 
   Widget _statusGroup() {
     final theme = Theme.of(context);
@@ -197,31 +211,31 @@ class _TranslatorPageState extends State<TranslatorPage> {
               children: [
                 Icon(Icons.subtitles_outlined, color: _running ? Colors.green : theme.colorScheme.primary),
                 const SizedBox(width: 10),
-                Expanded(child: Text('Maprisma Video Translator', style: theme.textTheme.titleMedium)),
+                Expanded(child: Text(tr('Maprisma Video Translator'), style: theme.textTheme.titleMedium)),
                 FilledButton.icon(
                   onPressed: _ready && !_running && !stopping && _state['downloading'] != true && setup['busy'] != true
                       ? () => _send({'action': 'start'})
                       : null,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start'),
+                  label: Text(tr('Start')),
                 ),
                 const SizedBox(width: 6),
                 OutlinedButton.icon(
                   onPressed: (_running || _state['overlay'] == true) && !stopping ? () => _send({'action': 'stop'}) : null,
                   icon: const Icon(Icons.stop),
-                  label: const Text('Stop'),
+                  label: Text(tr('Stop')),
                 ),
                 const SizedBox(width: 6),
                 OutlinedButton(
                   onPressed: _runtimeReady ? () => _send({'action': 'show'}) : null,
-                  child: const Text('Captions'),
+                  child: Text(tr('Captions')),
                 ),
               ],
             ),
             if (status.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(status,
+                child: Text(tr(status),
                     style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ),
           ],
@@ -230,8 +244,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
       for (final check in checks)
         if (check['status'] != 'ok' || anyError)
           PrefRow(
-            title: '${{'ok': '✓', 'error': '✕'}[check['status']] ?? '…'} ${check['label'] ?? ''}',
-            subtitle: '${check['detail'] ?? ''}',
+            title: '${{'ok': '✓', 'error': '✕'}[check['status']] ?? '…'} ${tr('${check['label'] ?? ''}')}',
+            subtitle: checkDetail(check, _settings),
             error: check['status'] == 'error',
           ),
     ]);
@@ -240,7 +254,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
   Widget? _stepGroup() {
     final step = nextStep(_state);
     if (step == null) return null;
-    return PrefGroup(title: 'Not ready yet', children: [
+    return PrefGroup(title: tr('Not ready yet'), children: [
       PrefRow(title: step.text),
       for (final (index, fix) in step.fixes.indexed)
         Padding(
@@ -260,8 +274,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
     ];
     final output = '${settings['output'] ?? ''}';
     final downloading = _state['downloading'] == true;
-    return PrefGroup(title: 'Listening', children: [
-      PrefRow(title: 'Capture', enabled: !_locked, suffixes: [
+    return PrefGroup(title: tr('Listening'), children: [
+      PrefRow(title: tr('Capture'), enabled: !_locked, suffixes: [
         ChoiceButton(
           options: inputs,
           value: settings['audio_input'] as String?,
@@ -271,24 +285,24 @@ class _TranslatorPageState extends State<TranslatorPage> {
           },
         ),
       ]),
-      PrefRow(title: 'Device', enabled: !_locked, suffixes: [
-        TextButton(onPressed: () => _send({'action': 'outputs'}), child: const Text('Refresh')),
+      PrefRow(title: tr('Device'), enabled: !_locked, suffixes: [
+        TextButton(onPressed: () => _send({'action': 'outputs'}), child: Text(tr('Refresh'))),
         ChoiceButton(
-          options: withCurrent(devices, output, (name) => '$name (not connected)'),
+          options: withCurrent(devices, output, (name) => trf('{0} (not connected)', [name])),
           value: output,
           onPick: (value) => _configure({'output': value}),
         ),
       ]),
       PrefRow(
-        title: 'Speech recognition',
-        subtitle: 'Whisper model, runs on the CPU',
+        title: tr('Speech recognition'),
+        subtitle: tr('Whisper model, runs on the CPU'),
         enabled: !_locked || downloading,
         suffixes: [
           OutlinedButton(
             onPressed: _runtimeReady && (downloading || !_locked)
                 ? () => _send({'action': downloading ? 'cancel-download' : 'download'})
                 : null,
-            child: Text(downloading ? 'Cancel' : 'Download'),
+            child: Text(downloading ? tr('Cancel') : tr('Download')),
           ),
           Sensitive(
             enabled: !_locked,
@@ -300,16 +314,16 @@ class _TranslatorPageState extends State<TranslatorPage> {
           ),
         ],
       ),
-      PrefRow(title: 'Spoken language', subtitle: 'Override when detection guesses wrong', enabled: !_locked, suffixes: [
+      PrefRow(title: tr('Spoken language'), subtitle: tr('Override when detection guesses wrong'), enabled: !_locked, suffixes: [
         ChoiceButton(
           options: withCurrent(sources, settings['source'] as String?),
           value: settings['source'] as String?,
           onPick: (value) => _configure({'source': value}),
         ),
       ]),
-      _switch('noise_filter', 'Noise suppression', 'Speech-band filter and adaptive noise reduction'),
-      _spin('chunk_seconds', 'Audio chunk (seconds)', 3, 15, 1,
-          'Shorter chunks show captions sooner; longer ones give Whisper more context'),
+      _switch('noise_filter', tr('Noise suppression'), tr('Speech-band filter and adaptive noise reduction')),
+      _spin('chunk_seconds', tr('Audio chunk (seconds)'), 3, 15, 1,
+          tr('Shorter chunks show captions sooner; longer ones give Whisper more context')),
     ]);
   }
 
@@ -321,26 +335,26 @@ class _TranslatorPageState extends State<TranslatorPage> {
       if (model.isNotEmpty) model,
     };
     final canFind = _runtimeReady && !_locked;
-    return PrefGroup(title: 'Translation', children: [
-      PrefRow(title: 'Translate into', enabled: !_locked, suffixes: [
+    return PrefGroup(title: tr('Translation'), children: [
+      PrefRow(title: tr('Translate into'), enabled: !_locked, suffixes: [
         ChoiceButton(
-          title: 'Translate into',
+          title: tr('Translate into'),
           searchable: true,
-          options: [for (final l in languages) (l, l)],
+          options: [for (final l in languages) (l, tr(l))],
           value: settings['target'] as String?,
           onPick: (value) => _configure({'target': value}),
         ),
       ]),
-      PrefRow(title: 'Translator', enabled: !_locked, suffixes: [
+      PrefRow(title: tr('Translator'), enabled: !_locked, suffixes: [
         ChoiceButton(
           options: providers,
           value: settings['provider'] as String?,
           onPick: (value) => _configure({'provider': value, 'model': '', 'endpoint': endpoints[value]}),
         ),
       ]),
-      PrefRow(title: 'Model', enabled: !_locked, suffixes: [
+      PrefRow(title: tr('Model'), enabled: !_locked, suffixes: [
         ChoiceButton(
-          title: 'Model',
+          title: tr('Model'),
           searchable: true,
           options: [for (final m in models) (m, m)],
           value: model,
@@ -348,13 +362,13 @@ class _TranslatorPageState extends State<TranslatorPage> {
         ),
       ]),
       PrefRow(
-        title: 'Find a model',
-        subtitle: 'Choose automatically picks an installed text model for the target language (by name, not a benchmark)',
+        title: tr('Find a model'),
+        subtitle: tr('Choose automatically picks an installed text model for the target language (by name, not a benchmark)'),
         suffixes: [
           if (settings['provider'] != 'Online')
             OutlinedButton(
-                onPressed: canFind ? () => _send({'action': 'suggest'}) : null, child: const Text('Choose automatically')),
-          OutlinedButton(onPressed: canFind ? () => _send({'action': 'models'}) : null, child: const Text('Load model list')),
+                onPressed: canFind ? () => _send({'action': 'suggest'}) : null, child: Text(tr('Choose automatically'))),
+          OutlinedButton(onPressed: canFind ? () => _send({'action': 'models'}) : null, child: Text(tr('Load model list'))),
         ],
       ),
     ]);
@@ -371,21 +385,21 @@ class _TranslatorPageState extends State<TranslatorPage> {
     return KeyedSubtree(
       key: _serverKey,
       child: PrefGroup(
-        title: 'Translation server',
-        description: 'Only recognised text is sent to it, never audio. Online providers may charge your account.',
+        title: tr('Translation server'),
+        description: tr('Only recognised text is sent to it, never audio. Online providers may charge your account.'),
         children: [
-          _entry('Server address', _endpoint, _endpointFocus, () => _configure({'endpoint': _endpoint.text.trim()})),
-          _entry('Model ID', _modelId, _modelFocus, () => _configure({'model': _modelId.text.trim()})),
+          _entry(tr('Server address'), _endpoint, _endpointFocus, () => _configure({'endpoint': _endpoint.text.trim()})),
+          _entry(tr('Model ID'), _modelId, _modelFocus, () => _configure({'model': _modelId.text.trim()})),
           EntryPrefRow(
-            title: keyReady ? 'API key or bearer token · set' : 'API key or bearer token',
+            title: keyReady ? tr('API key or bearer token · set') : tr('API key or bearer token'),
             controller: _token,
             password: true,
             onSubmitted: (_) => saveToken(),
-            suffixes: [TextButton(onPressed: saveToken, child: const Text('Apply'))],
+            suffixes: [TextButton(onPressed: saveToken, child: Text(tr('Apply')))],
           ),
           SwitchPrefRow(
-            title: 'Save token on this device',
-            subtitle: 'An owner-only file, not a keychain',
+            title: tr('Save token on this device'),
+            subtitle: tr('An owner-only file, not a keychain'),
             value: _state['remember_token'] == true,
             onChanged: (on) => _send({'action': 'configure', 'remember_token': on}),
           ),
@@ -409,7 +423,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
               decoration: InputDecoration(labelText: title, border: InputBorder.none, isDense: true),
             ),
           ),
-          TextButton(onPressed: apply, child: const Text('Apply')),
+          TextButton(onPressed: apply, child: Text(tr('Apply'))),
         ]),
       ),
     );
@@ -419,27 +433,27 @@ class _TranslatorPageState extends State<TranslatorPage> {
     final settings = _settings;
     final colors = <Option>[
       for (final o in (_state['text_colors'] is List ? _state['text_colors'] as List : const []).whereType<Map>())
-        ('${o['value']}', '${o['label']}'),
+        ('${o['value']}', tr('${o['label']}')),
     ];
-    return PrefGroup(title: 'Captions', children: [
-      _switch('auto_scroll', 'Follow new captions', 'Scroll to each new caption'),
-      PrefRow(title: 'Caption text colour', subtitle: 'The backdrop adapts for contrast', suffixes: [
+    return PrefGroup(title: tr('Captions'), children: [
+      _switch('auto_scroll', tr('Follow new captions'), tr('Scroll to each new caption')),
+      PrefRow(title: tr('Caption text colour'), subtitle: tr('The backdrop adapts for contrast'), suffixes: [
         ChoiceButton(
           options: colors,
           value: settings['text_color'] as String?,
           onPick: (value) => _configure({'text_color': value}),
         ),
       ]),
-      _spin('caption_seconds', 'Show each caption for (seconds)', 1, 120, 1),
-      _spin('font_size', 'Caption font size', 12, 64, 1),
+      _spin('caption_seconds', tr('Show each caption for (seconds)'), 1, 120, 1),
+      _spin('font_size', tr('Caption font size'), 12, 64, 1),
       PrefRow(
-        title: 'Caption window',
-        subtitle: 'Drag it with the mouse; resize it with the handle at its bottom-right corner',
+        title: tr('Caption window'),
+        subtitle: tr('Drag it with the mouse; resize it with the handle at its bottom-right corner'),
         suffixes: [
           OutlinedButton(
-              onPressed: _runtimeReady ? () => _send({'action': 'clear'}) : null, child: const Text('Clear captions')),
+              onPressed: _runtimeReady ? () => _send({'action': 'clear'}) : null, child: Text(tr('Clear captions'))),
           OutlinedButton(
-              onPressed: _state['overlay'] == true ? () => _send({'action': 'close'}) : null, child: const Text('Close')),
+              onPressed: _state['overlay'] == true ? () => _send({'action': 'close'}) : null, child: Text(tr('Close'))),
         ],
       ),
     ]);
@@ -447,34 +461,31 @@ class _TranslatorPageState extends State<TranslatorPage> {
 
   Widget _appearanceGroup() {
     return PrefGroup(
-      title: 'Caption window appearance',
-      description: 'Only the caption window is affected. −1 uses the theme default. Lower the transparency so the '
-          'backdrop behind black or white text shows.',
+      title: tr('Caption window appearance'),
+      description: tr('Only the caption window is affected. −1 uses the theme default. Lower the transparency so the backdrop behind black or white text shows.'),
       children: [
-        _spin('background_transparency', 'Background transparency (%)', -1, 100, 5),
-        _spin('border_width', 'Border thickness (px)', -1, 16, 1),
-        _spin('history_lines', 'Retained caption paragraphs', 50, 5000, 50),
+        _spin('background_transparency', tr('Background transparency (%)'), -1, 100, 5),
+        _spin('border_width', tr('Border thickness (px)'), -1, 16, 1),
+        _spin('history_lines', tr('Retained caption paragraphs'), 50, 5000, 50),
       ],
     );
   }
 
   Widget _shortcutsGroup() {
     return PrefGroup(
-      title: 'Keyboard shortcuts',
-      description: 'In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a '
-          'shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or '
-          '“video-trans text-color next”. “video-trans help” in a terminal lists every action.',
+      title: tr('Keyboard shortcuts'),
+      description: tr('In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.'),
       children: [
         if (_state['shortcuts'] == false && _runtimeReady)
           Padding(
             padding: const EdgeInsets.all(10),
             child: OutlinedButton(
               onPressed: () => _send({'action': 'install-shortcuts'}),
-              child: const Text('Add the video-trans command'),
+              child: Text(tr('Add the video-trans command')),
             ),
           )
         else
-          const PrefRow(title: 'The video-trans command is installed'),
+          PrefRow(title: tr('The video-trans command is installed')),
       ],
     );
   }

@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""Check source keys, placeholders, desktop entries, and generated catalog freshness."""
+import json
+from pathlib import Path
+import re
+import unittest
+ROOT = Path(__file__).resolve().parents[1]
+CODES = ('de', 'fr', 'es', 'it', 'pt', 'nl', 'pl')
+def catalog(code):
+    result = {}
+    for folder in ('translations', 'translations/extra'):
+        result.update(json.loads((ROOT / folder / f'{code}.json').read_text()))
+    return result
+
+def literal_keys():
+    keys = set()
+    for folder, suffix in [('app/lib', '*.dart'), ('control/src', '*.rs'), ('applet/src', '*.rs'), ('captions/src', '*.rs'), ('tray/src', '*.rs')]:
+        for path in (ROOT / folder).glob(suffix):
+            if path.name.endswith('.g.dart'): continue
+            text = path.read_text()
+            # Match a complete first string argument; interpolation is a dynamic lookup.
+            for match in re.finditer(r'''\btrf?\(\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*[,)]''', text):
+                raw = match[1]
+                if path.suffix == '.dart' and '$' in raw: continue
+                key = json.loads(raw) if raw.startswith('"') else raw[1:-1].replace("\\'", "'")
+                keys.add(key)
+    return keys
+
+class TranslationTests(unittest.TestCase):
+    def test_all_literal_keys_exist(self):
+        keys = literal_keys()
+        self.assertGreater(len(keys), 90)
+        for code in CODES:
+            self.assertEqual(sorted(keys - catalog(code).keys()), [], code)
+
+    def test_catalog_parity_and_placeholders(self):
+        expected = catalog('de').keys()
+        for code in CODES:
+            values = catalog(code)
+            self.assertEqual(values.keys(), expected, code)
+            for key, value in values.items():
+                self.assertIsInstance(value, str)
+                self.assertTrue(value.strip(), (code, key))
+                self.assertEqual(sorted(re.findall(r'\{\d+\}', key)), sorted(re.findall(r'\{\d+\}', value)), (code, key))
+
+    def test_generated_sources_are_current(self):
+        expected = {code: catalog(code) for code in ('en', *CODES)}
+        self.assertEqual(json.loads((ROOT / 'control/src/translations.json').read_text()), expected)
+        dart = (ROOT / 'app/lib/translations.g.dart').read_text().split('catalogs = ', 1)[1].rstrip(';\n').replace(r'\$', '$')
+        self.assertEqual(json.loads(dart), expected)
+
+    def test_desktop_translations(self):
+        for path in (ROOT / 'data').glob('*.desktop'):
+            lines = dict(line.split('=', 1) for line in path.read_text().splitlines() if '=' in line)
+            for field in ('Name', 'Comment'):
+                for code in CODES:
+                    self.assertEqual(lines[f'{field}[{code}]'], catalog(code)[lines[field]])
+
+if __name__ == '__main__':
+    print(f'{len(literal_keys())} distinct literal tr()/trf() keys; {len(catalog("de"))} catalog keys per language')
+    unittest.main()

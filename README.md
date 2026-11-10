@@ -56,15 +56,40 @@ For live verification: check login autostart, all three mouse buttons, menu sett
 
 | Data | Location |
 | --- | --- |
+| Interface language | `~/.config/maprisma-video-translator/interface.json` (respects `XDG_CONFIG_HOME`) |
 | Settings | `~/.config/video-trans/settings.json` |
 | Saved API keys (optional, owner-only) | `~/.config/video-trans/credentials.json` |
 | Python runtime | `~/.local/share/video-trans/runtime/` |
 | Whisper models | `~/.cache/huggingface/hub/` |
 
+## Interface languages
+
+The Language choice at the top of the settings window offers English, Deutsch,
+Français, Español, Italiano, Português, Nederlands and Polski. System follows the
+first non-empty `LC_ALL`, `LC_MESSAGES`, or `LANG`; unsupported locales use English.
+The selection is saved as `language: "auto"` or a language code in the interface
+settings file. The window updates immediately; the applet, tray and caption status
+update on their next refresh (normally within 1.5 seconds).
+
+English text is the translation key: `tr('Start')` or `trf('System ({0})', [name])`.
+Uncatalogued text stays English. Device/model names, paths, credential values and
+caption content are data and stay unchanged. The shared Python backend is unchanged;
+its human-readable messages are translated at the display boundary. Diagnostics
+from external programs and providers fall back to their original wording.
+
+There is no Omarchy video catalog. Matching translations in `translations/*.json`
+reuse the Playground catalogs as terminology guidance; the app-specific text is in
+`translations/extra/*.json`. English catalogs are empty because English is the key.
+After editing a catalog, run `tools/gen-translations` to regenerate the checked-in
+Dart source and Rust JSON include. Neither runtime needs loose files or downloads.
+
 ## Tests
 
 ```sh
-cargo test                                   # applet, tray menu/actions and caption helper
+tools/test-translations                      # source keys, all 7 catalogs, placeholders, desktop entries
+/mnt/Data/flutter/bin/cache/dart-sdk/bin/dart app/test/i18n_check.dart
+cargo build --offline
+cargo test --offline                         # applet, tray menu/actions and caption helper
 cd app && /mnt/Data/flutter/bin/flutter test && /mnt/Data/flutter/bin/flutter analyze
 cd backend && python3 -m unittest tests.test_readiness tests.test_bridge
 ~/.local/share/video-trans/runtime/bin/python -m unittest discover -s tests   # all, after setup

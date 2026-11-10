@@ -3231,6 +3231,7 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "libcosmic",
+ "maprisma-video-translator-control",
  "serde_json",
  "tokio",
 ]

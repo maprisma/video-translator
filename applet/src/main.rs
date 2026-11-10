@@ -41,7 +41,7 @@ fn main() -> cosmic::iced::Result {
 
 fn notify(text: &str) {
     let _ = std::process::Command::new("notify-send")
-        .args(["--app-name=Maprisma Video Translator", "-i", ICON, "Maprisma Video Translator", text])
+        .args(["--app-name=Maprisma Video Translator", "-i", ICON, &tr("Maprisma Video Translator"), &tr(text)])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -146,14 +146,14 @@ impl Translator {
         ];
         if let Some(checks) = state.get("checks").and_then(Value::as_array) {
             for check in checks.iter().filter(|c| string(c, "status") == "error") {
-                status.push(format!("✕ {}: {}", string(check, "label"), string(check, "detail")));
+                status.push(format!("✕ {}: {}", tr(string(check, "label")), check_detail(check, state)));
             }
         }
-        let header = row![icon::from_name(ICON).size(24).symbolic(true).icon(), text::body(status.join("\n")).width(Length::Fill)]
+        let header = row![icon::from_name(ICON).size(24).symbolic(true).icon(), text::body(status.iter().map(|s| tr(s)).collect::<Vec<_>>().join("\n")).width(Length::Fill)]
             .spacing(10)
             .align_y(Alignment::Center);
 
-        let control = |icon_name: &'static str, label: &'static str, action: &'static str, enabled: bool| {
+        let control = |icon_name: &'static str, label: String, action: &'static str, enabled: bool| {
             button::standard(label)
                 .leading_icon(icon::from_name(icon_name).size(16).symbolic(true))
                 .width(Length::Fill)
@@ -162,12 +162,12 @@ impl Translator {
         let controls = row![
             control(
                 "media-playback-start-symbolic",
-                "Start",
+                tr("Start"),
                 "start",
                 ready && !self.running && !stopping && !downloading && !flag(setup, "busy")
             ),
-            control("media-playback-stop-symbolic", "Stop", "stop", (self.running || flag(state, "overlay")) && !stopping),
-            control(ICON, "Captions", "show", runtime_ready),
+            control("media-playback-stop-symbolic", tr("Stop"), "stop", (self.running || flag(state, "overlay")) && !stopping),
+            control(ICON, tr("Captions"), "show", runtime_ready),
         ]
         .spacing(6);
 
@@ -182,7 +182,7 @@ impl Translator {
         }
         if downloading {
             top = top.push(
-                button::standard("Cancel download")
+                button::standard(tr("Cancel download"))
                     .width(Length::Fill)
                     .on_press(Message::Send(json!({"action": "cancel-download"}))),
             );
@@ -192,7 +192,7 @@ impl Translator {
         if loaded {
             let target = setting(state, "target").and_then(Value::as_str).unwrap_or("German");
             let input = setting(state, "audio_input").and_then(Value::as_str).unwrap_or("Audio output");
-            actions = actions.push(self.expander(Section::Target, format!("Translate into · {target}"), !locked));
+            actions = actions.push(self.expander(Section::Target, trf("Translate into · {0}", &[&tr(target)]), !locked));
             if self.expanded == Some(Section::Target) && !locked {
                 let list = LANGUAGES.iter().fold(column![], |list, language| {
                     list.push(self.choice(
@@ -203,7 +203,7 @@ impl Translator {
                 });
                 actions = actions.push(scrollable(list).height(Length::Fixed(240.0)));
             }
-            actions = actions.push(self.expander(Section::Input, format!("Listen to · {input}"), runtime_ready && !locked));
+            actions = actions.push(self.expander(Section::Input, trf("Listen to · {0}", &[&tr(input)]), runtime_ready && !locked));
             if self.expanded == Some(Section::Input) && runtime_ready && !locked {
                 for (value, label) in INPUTS {
                     actions = actions.push(self.choice(
@@ -217,7 +217,7 @@ impl Translator {
             let follow = setting(state, "auto_scroll").and_then(Value::as_bool) != Some(false);
             actions = actions.push(padded_control(
                 row![
-                    text::body("Follow new captions").width(Length::Fill),
+                    text::body(tr("Follow new captions")).width(Length::Fill),
                     toggler(follow).on_toggle(|on| Message::Send(json!({"action": "configure", "settings": {"auto_scroll": on}}))),
                 ]
                 .align_y(Alignment::Center),
@@ -227,19 +227,19 @@ impl Translator {
                 row![
                     icon::from_name("preferences-desktop-font-symbolic").size(16).symbolic(true),
                     slider(FONT.0..=FONT.1, font, Message::Font).step(1.0_f32).on_release(Message::FontDone),
-                    text::body(format!("{font:.0} pt")).width(Length::Fixed(48.0)),
+                    text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(48.0)),
                 ]
                 .spacing(10)
                 .align_y(Alignment::Center),
             ));
             actions = actions.push(
-                menu_button(text::body("Clear captions"))
+                menu_button(text::body(tr("Clear captions")))
                     .on_press_maybe(runtime_ready.then(|| Message::Send(json!({"action": "clear"})))),
             );
         }
         actions = actions
             .push(divider::horizontal::default())
-            .push(menu_button(text::body("Open Maprisma Video Translator…")).on_press(Message::OpenWindow));
+            .push(menu_button(text::body(tr("Open Maprisma Video Translator…"))).on_press(Message::OpenWindow));
 
         column![padded_control(top).padding([12, 16]), actions]
             .width(Length::Fixed(POPUP_WIDTH))
@@ -264,7 +264,7 @@ impl Translator {
         } else {
             space::horizontal().width(Length::Fixed(16.0)).into()
         };
-        menu_button(row![mark, text::body(label.to_string())].spacing(8).padding([0, 0, 0, 12]).align_y(Alignment::Center))
+        menu_button(row![mark, text::body(tr(label))].spacing(8).padding([0, 0, 0, 12]).align_y(Alignment::Center))
             .on_press_maybe((!selected).then_some(Message::Send(payload)))
             .into()
     }

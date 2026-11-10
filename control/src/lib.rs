@@ -1,3 +1,5 @@
+pub mod i18n;
+pub use i18n::{tr, trf};
 use serde_json::{Value, json};
 use std::{path::PathBuf, process::Stdio, time::Duration};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -103,9 +105,9 @@ pub async fn request(payload: Value) -> Value {
     };
     match tokio::time::timeout(Duration::from_secs(60), run).await {
         Ok(Ok(state)) => state,
-        Ok(Err(error)) => json!({ "error": format!("Maprisma Video Translator: {error}") }),
+        Ok(Err(error)) => json!({ "error": trf("Maprisma Video Translator: {0}", &[&error]) }),
         Err(_) => {
-            json!({ "error": "Maprisma Video Translator: the caption controller did not answer." })
+            json!({ "error": tr("Maprisma Video Translator: the caption controller did not answer.") })
         }
     }
 }
@@ -181,7 +183,7 @@ pub fn next_step(state: &Value) -> Option<(String, Vec<Fix>)> {
         let message = Some(string(setup, "message"))
             .filter(|m| !m.is_empty())
             .unwrap_or("Setting up…");
-        return Some((message.into(), Vec::new()));
+        return Some((tr(message), Vec::new()));
     }
     let failed = state
         .get("steps")
@@ -190,7 +192,7 @@ pub fn next_step(state: &Value) -> Option<(String, Vec<Fix>)> {
         .find(|step| step.get("ok").and_then(Value::as_bool) != Some(true))?;
     let mut problem = string(failed, "problem").to_string();
     if string(setup, "phase") == "error" && string(failed, "id") == "runtime" {
-        problem = format!("{} {problem}", string(setup, "message"));
+        problem = format!("{} {}", tr(string(setup, "message")), tr(&problem));
     }
     let fixes = failed
         .get("fixes")
@@ -199,7 +201,7 @@ pub fn next_step(state: &Value) -> Option<(String, Vec<Fix>)> {
             fixes
                 .iter()
                 .map(|fix| Fix {
-                    label: string(fix, "label").into(),
+                    label: tr(string(fix, "label")),
                     requests: fix_requests(fix),
                     // A fix with a panel ("provider") also opens the Maprisma Video Translator window.
                     panel: fix
@@ -209,7 +211,7 @@ pub fn next_step(state: &Value) -> Option<(String, Vec<Fix>)> {
                 .collect()
         })
         .unwrap_or_default();
-    Some((problem, fixes))
+    Some((tr(&problem), fixes))
 }
 
 pub async fn run_captions() {
@@ -224,5 +226,15 @@ pub async fn run_captions() {
             let _ = child.wait().await;
         }
         tokio::time::sleep(RESTART_DELAY).await;
+    }
+}
+
+/// A check may carry a raw model identifier rather than a human-readable message.
+pub fn check_detail(check: &Value, state: &Value) -> String {
+    let detail = string(check, "detail");
+    if ["model", "speech_model", "target"].iter().any(|key| setting(state, key).and_then(Value::as_str) == Some(detail)) {
+        detail.into()
+    } else {
+        tr(detail)
     }
 }
