@@ -24,10 +24,10 @@ use cosmic::widget::{
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
 use maprisma_video_translator_control::*;
+#[allow(dead_code)] // the shared copy of every Maprisma COSMIC app; not every part is used here
 mod corners;
 mod shot;
 mod shot_files;
-use corners::{Corners, Look};
 use shot::{Shot, ShotMsg};
 
 const APP_ID: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator";
@@ -91,8 +91,7 @@ struct Translator {
     busy: usize,       // requests on their way
     expanded: Option<Section>,
     shot: Shot,
-    look: Look,
-    corners: Corners,
+    corners: String, // Settings › Corners (corners.rs)
     screenshot_key: bool,
 }
 
@@ -284,8 +283,9 @@ impl Translator {
     fn read_look(&mut self) -> Task<Message> {
         let (screenshot_key, corners) = i18n::look_settings();
         self.screenshot_key = screenshot_key;
-        self.corners = Corners::parse(&corners);
-        self.look.apply(&self.core, self.corners)
+        self.corners = corners::normalize(&corners).to_string();
+        corners::set_current(&self.corners);
+        Task::none()
     }
 
     fn close_popup(&mut self) -> Task<Message> {
@@ -496,11 +496,7 @@ impl cosmic::Application for Translator {
             Some(card) => column![card, self.menu()].width(Length::Fixed(POPUP_WIDTH)).into(),
             None => self.menu(),
         };
-        self.core.applet.popup_container(content).into()
-    }
-
-    fn system_theme_update(&mut self, _keys: &[&'static str], _theme: &cosmic::cosmic_theme::Theme) -> Task<Message> {
-        self.look.apply(&self.core, self.corners)
+        corners::apply(&self.corners, self.core.applet.popup_container(content))
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
