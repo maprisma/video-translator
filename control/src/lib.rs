@@ -71,7 +71,12 @@ pub fn sibling(name: &str) -> PathBuf {
 }
 
 pub fn spawn(program: PathBuf) {
+    spawn_args(program, &[]);
+}
+
+pub fn spawn_args(program: PathBuf, args: &[&str]) {
     let _ = std::process::Command::new(program)
+        .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

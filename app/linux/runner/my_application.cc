@@ -242,18 +242,53 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
+// --toggle (the tray icon, as Maprisma Playground): close when the window is shown and
+// focused, else show and focus it (or open it).
+static void toggle_activated(GSimpleAction* action, GVariant* parameter, gpointer user_data) {
+  GtkApplication* app = GTK_APPLICATION(user_data);
+  GList* windows = gtk_application_get_windows(app);
+  if (windows == nullptr) {
+    g_application_activate(G_APPLICATION(app));
+    return;
+  }
+  GtkWindow* window = GTK_WINDOW(windows->data);
+  if (gtk_widget_get_visible(GTK_WIDGET(window)) && gtk_window_is_active(window)) {
+    gtk_window_close(window);
+    return;
+  }
+  gtk_window_present(window);
+}
+
 // Implements GApplication::local_command_line.
 static gboolean my_application_local_command_line(GApplication* application,
                                                   gchar*** arguments,
                                                   int* exit_status) {
   MyApplication* self = MY_APPLICATION(application);
-  // Strip out the first argument as it is the binary name.
-  self->dart_entrypoint_arguments = g_strdupv(*arguments + 1);
+  // Strip out the first argument as it is the binary name; --toggle is ours, not Dart's.
+  gboolean toggle = FALSE;
+  GPtrArray* kept = g_ptr_array_new();
+  for (gchar** arg = *arguments + 1; *arg != nullptr; arg++) {
+    if (g_strcmp0(*arg, "--toggle") == 0) {
+      toggle = TRUE;
+    } else {
+      g_ptr_array_add(kept, g_strdup(*arg));
+    }
+  }
+  g_ptr_array_add(kept, nullptr);
+  self->dart_entrypoint_arguments = reinterpret_cast<char**>(g_ptr_array_free(kept, FALSE));
 
   g_autoptr(GError) error = nullptr;
   if (!g_application_register(application, nullptr, &error)) {
     g_warning("Failed to register: %s", error->message);
     *exit_status = 1;
+    return TRUE;
+  }
+
+  if (toggle && g_application_get_is_remote(application)) {
+    g_action_group_activate_action(G_ACTION_GROUP(application), "toggle", nullptr);
+    GDBusConnection* bus = g_application_get_dbus_connection(application);
+    if (bus != nullptr) g_dbus_connection_flush_sync(bus, nullptr, nullptr);
+    *exit_status = 0;
     return TRUE;
   }
 
@@ -267,9 +302,10 @@ static gboolean my_application_local_command_line(GApplication* application,
 static void my_application_startup(GApplication* application) {
   // MyApplication* self = MY_APPLICATION(object);
 
-  // Perform any actions required at application startup.
-
   G_APPLICATION_CLASS(my_application_parent_class)->startup(application);
+  g_autoptr(GSimpleAction) toggle = g_simple_action_new("toggle", nullptr);
+  g_signal_connect(toggle, "activate", G_CALLBACK(toggle_activated), application);
+  g_action_map_add_action(G_ACTION_MAP(application), G_ACTION(toggle));
 }
 
 // Implements GApplication::shutdown.

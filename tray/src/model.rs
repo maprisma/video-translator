@@ -5,6 +5,8 @@ use serde_json::{Value, json};
 pub struct Action {
     pub requests: Vec<Value>,
     pub window: bool,
+    /// The icon's click: close the window when it is in front, else show it (`--toggle`).
+    pub toggle: bool,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Item {
@@ -26,6 +28,7 @@ impl Item {
             action: (!requests.is_empty()).then_some(Action {
                 requests,
                 window: false,
+                toggle: false,
             }),
         }
     }
@@ -108,6 +111,7 @@ pub fn menu(state: &Value, busy: bool) -> Item {
                 item.action = Some(Action {
                     requests: fix.requests,
                     window: fix.panel,
+                    toggle: false,
                 });
                 items.push(item);
             }
@@ -124,6 +128,7 @@ pub fn menu(state: &Value, busy: bool) -> Item {
     open.action = Some(Action {
         requests: vec![],
         window: true,
+        toggle: false,
     });
     items.push(open);
     Item {

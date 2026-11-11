@@ -80,6 +80,7 @@ impl Menu {
             let _ = self.tx.send(model::Action {
                 requests: vec![json!({"action":"release"})],
                 window: false,
+                toggle: false,
             });
         }
         if event == "clicked" {
@@ -253,12 +254,14 @@ impl Tray {
         let _ = self.tx.send(model::Action {
             requests: vec![],
             window: true,
+            toggle: true,
         });
     }
     fn secondary_activate(&self, _x: i32, _y: i32) {
         let _ = self.tx.send(model::Action {
             requests: vec![json!({"action":"toggle"})],
             window: false,
+            toggle: false,
         });
     }
     fn context_menu(&self, _x: i32, _y: i32) {} // The host displays the exported Menu.
@@ -388,7 +391,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(error)=value["error"].as_str() {eprintln!("{error}");}
                     else if value.get("settings").is_some() {publish(&connection,&state,value,true).await?;}
                 }
-                if action.window {spawn(sibling("maprisma-video-translator"));}
+                if action.window {
+                    let app = sibling("maprisma-video-translator");
+                    if action.toggle {spawn_args(app, &["--toggle"]);} else {spawn(app);}
+                }
                 let value=state.lock().await.value.clone(); publish(&connection,&state,value,false).await?;
             }
         }
