@@ -19,4 +19,4 @@ Comment[pl]=Napisy tłumaczone na żywo w zasobniku systemowym KDE
 Exec=maprisma-video-translator-tray
 Icon=io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic
 Terminal=false
-OnlyShowIn=KDE;
+OnlyShowIn=KDE;Hyprland;

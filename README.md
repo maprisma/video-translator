@@ -40,7 +40,7 @@ Add **Maprisma Video Translator** in **COSMIC Settings → Desktop → Panel →
 
 ## KDE Plasma
 
-KDE Plasma 6.8 on Wayland uses the **tray**, because the libcosmic panel applet requires COSMIC. Run `./install.sh` (builds the Rust workspace with `cargo build --release --offline`), then log in again, or start `~/.local/bin/maprisma-video-translator-tray` now. The installer adds `~/.config/autostart/com.maprisma.VideoTranslator.Tray.desktop` with `OnlyShowIn=KDE;` (honouring `XDG_CONFIG_HOME`). COSMIC continues to use its existing panel applet.
+KDE Plasma 6.8 and Hyprland use the **tray**, because the libcosmic panel applet requires COSMIC. Run `./install.sh` (builds the Rust workspace with `cargo build --release --offline`), then log in again, or start `~/.local/bin/maprisma-video-translator-tray` now. The installer adds `~/.config/autostart/com.maprisma.VideoTranslator.Tray.desktop` with `OnlyShowIn=KDE;Hyprland;` (honouring `XDG_CONFIG_HOME`). COSMIC continues to use its existing panel applet.
 
 Left click opens the Maprisma Video Translator window; middle click starts or stops captions; right click opens the menu. It offers Start, Stop, Captions, guided setup, Clear captions and Settings…; the language, the audio input, following new captions and the caption font size are set in the settings window. Running captions use the tray's attention icon; the tooltip shows the backend status. The tray permits one instance per session bus and registers again after the Plasma tray watcher restarts.
 
