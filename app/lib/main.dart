@@ -3,8 +3,10 @@
 // bridge.sh; the panel applet starts it ("Open Maprisma Video Translator…").
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'app_theme.dart';
 import 'bridge.dart';
@@ -14,17 +16,27 @@ import 'i18n.dart';
 import 'look.dart';
 import 'shot.dart';
 import 'translator_page.dart';
+import 'window.dart';
+
+/// The window (GTK runner): Esc closes it, its size is kept next to the interface settings.
+final appWindow = AppWindow(
+  channel: const MethodChannel('maprisma_video_translator/window'),
+  file: () => File('${interfaceSettingsFile.parent.path}/window.json'),
+  defaultSize: const Size(680, 860),
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The desktop's palette before the first frame: no flash of Material's colours.
   final watcher = DesktopLookWatcher();
   desktopLook.value = await watcher.read();
+  // The saved size before the window shows (it shows with the first frame).
+  await appWindow.restore();
   runApp(TranslatorApp(bridge: Bridge(), lookWatcher: watcher));
 }
 
 class TranslatorApp extends StatefulWidget {
-  const TranslatorApp({super.key, required this.bridge, this.desktopTheme, this.lookWatcher});
+  const TranslatorApp({super.key, required this.bridge, this.desktopTheme, this.lookWatcher, this.onClose});
 
   final Bridge bridge;
   final DesktopTheme? desktopTheme;
@@ -32,6 +44,10 @@ class TranslatorApp extends StatefulWidget {
   /// Re-reads the desktop's look every 5 s and when the window gets the focus; null (tests):
   /// [desktopLook] stays as it is set.
   final DesktopLookWatcher? lookWatcher;
+
+  /// Esc with nothing open: closes the window like its close button (which releases the
+  /// controller; captions on screen go on). Null: [appWindow]'s close.
+  final VoidCallback? onClose;
 
   @override
   State<TranslatorApp> createState() => _TranslatorAppState();
@@ -96,7 +112,7 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
                 _desktop.syncHeader(Theme.of(context));
                 return ShotScope(child: child!);
               },
-              home: TranslatorPage(bridge: widget.bridge),
+              home: EscapeCloses(onClose: widget.onClose ?? appWindow.close, child: TranslatorPage(bridge: widget.bridge)),
             );
           },
         ),

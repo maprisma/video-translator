@@ -421,6 +421,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn left_click_toggles_the_window_middle_click_captions() {
+        let state = Arc::new(Mutex::new(State { value: Value::Null, busy: false, revision: 1, language: i18n::language() }));
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let tray = Tray { state, tx };
+        tray.activate(0, 0);
+        assert_eq!(rx.try_recv().unwrap(), model::Action { requests: vec![], window: true, toggle: true });
+        tray.secondary_activate(0, 0);
+        let middle = rx.try_recv().unwrap();
+        assert_eq!(middle.requests, vec![json!({"action":"toggle"})]);
+        assert!(!middle.window);
+    }
+
+    #[tokio::test]
     async fn events_and_event_groups_without_bus() {
         let state = Arc::new(Mutex::new(State {
             value: json!({"settings":{},"steps":[{"id":"runtime","ok":true}]}),

@@ -14,6 +14,8 @@ struct _MyApplication {
   GDBusProxy* portal;
   GtkCssProvider* header_css;
   FlView* view;
+  FlMethodChannel* window_channel;
+  GtkWindow* window;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -171,6 +173,103 @@ static void setup_theme(MyApplication* self, FlView* view) {
                                             theme_method_cb, self, nullptr);
 }
 
+// --- The window (window.dart) ------------------------------------------------
+// Dart closes the window on Esc (as the close button: delete-event, so the app's exit handling
+// runs), sizes it before it is shown (the saved size, fitted to the screen's work area) and hears
+// every resize, which it saves unless the window is maximised, fullscreen or tiled.
+
+static double number_arg(FlValue* args, const char* key) {
+  if (args == nullptr || fl_value_get_type(args) != FL_VALUE_TYPE_MAP) return 0;
+  FlValue* value = fl_value_lookup_string(args, key);
+  if (value == nullptr) return 0;
+  if (fl_value_get_type(value) == FL_VALUE_TYPE_INT) return fl_value_get_int(value);
+  if (fl_value_get_type(value) == FL_VALUE_TYPE_FLOAT) return fl_value_get_float(value);
+  return 0;
+}
+
+static FlValue* size_value(int width, int height) {
+  FlValue* map = fl_value_new_map();
+  fl_value_set_string_take(map, "width", fl_value_new_int(width));
+  fl_value_set_string_take(map, "height", fl_value_new_int(height));
+  return map;
+}
+
+static void window_method_cb(FlMethodChannel* channel, FlMethodCall* call,
+                             gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  const gchar* name = fl_method_call_get_name(call);
+  g_autoptr(FlMethodResponse) response = nullptr;
+  if (self->window == nullptr) {
+    response = FL_METHOD_RESPONSE(fl_method_error_response_new("no-window", "No window", nullptr));
+  } else if (g_strcmp0(name, "close") == 0) {
+    gtk_window_close(self->window);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  } else if (g_strcmp0(name, "screen") == 0) {
+    GdkDisplay* display = gtk_widget_get_display(GTK_WIDGET(self->window));
+    GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(self->window));
+    GdkMonitor* monitor = gdk_window != nullptr
+                              ? gdk_display_get_monitor_at_window(display, gdk_window)
+                              : nullptr;
+    if (monitor == nullptr) monitor = gdk_display_get_primary_monitor(display);
+    if (monitor == nullptr && gdk_display_get_n_monitors(display) > 0)
+      monitor = gdk_display_get_monitor(display, 0);
+    if (monitor == nullptr) {
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+    } else {
+      GdkRectangle area;
+      gdk_monitor_get_workarea(monitor, &area);
+      g_autoptr(FlValue) size = size_value(area.width, area.height);
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(size));
+    }
+  } else if (g_strcmp0(name, "resize") == 0) {
+    FlValue* args = fl_method_call_get_args(call);
+    int width = static_cast<int>(number_arg(args, "width"));
+    int height = static_cast<int>(number_arg(args, "height"));
+    if (width > 0 && height > 0) {
+      gtk_window_set_default_size(self->window, width, height);
+      gtk_window_resize(self->window, width, height);
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
+  fl_method_call_respond(call, response, nullptr);
+}
+
+static gboolean window_configure_cb(GtkWidget* widget, GdkEvent* event,
+                                    gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  if (self->window_channel == nullptr) return FALSE;
+  int width = 0, height = 0;
+  gtk_window_get_size(GTK_WINDOW(widget), &width, &height);
+  GdkWindow* gdk_window = gtk_widget_get_window(widget);
+  GdkWindowState state = gdk_window != nullptr ? gdk_window_get_state(gdk_window)
+                                               : static_cast<GdkWindowState>(0);
+  g_autoptr(FlValue) report = size_value(width, height);
+  fl_value_set_string_take(report, "maximized",
+                           fl_value_new_bool((state & GDK_WINDOW_STATE_MAXIMIZED) != 0));
+  fl_value_set_string_take(report, "fullscreen",
+                           fl_value_new_bool((state & GDK_WINDOW_STATE_FULLSCREEN) != 0));
+  fl_value_set_string_take(report, "tiled",
+                           fl_value_new_bool((state & GDK_WINDOW_STATE_TILED) != 0));
+  fl_method_channel_invoke_method(self->window_channel, "resized", report,
+                                  nullptr, nullptr, nullptr);
+  return FALSE;
+}
+
+static void setup_window(MyApplication* self, GtkWindow* window, FlView* view) {
+  self->window = window;
+  g_object_add_weak_pointer(G_OBJECT(window), reinterpret_cast<gpointer*>(&self->window));
+  FlEngine* engine = fl_view_get_engine(view);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->window_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(engine), "maprisma_video_translator/window",
+      FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(self->window_channel,
+                                            window_method_cb, self, nullptr);
+  g_signal_connect(window, "configure-event", G_CALLBACK(window_configure_cb), self);
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -238,6 +337,7 @@ static void my_application_activate(GApplication* application) {
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
   setup_theme(self, view);
+  setup_window(self, window, view);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
@@ -325,6 +425,7 @@ static void my_application_dispose(GObject* object) {
     g_signal_handlers_disconnect_by_data(self->portal, self);
   g_clear_object(&self->portal);
   g_clear_object(&self->theme_channel);
+  g_clear_object(&self->window_channel);
   g_clear_object(&self->header_css);
   self->view = nullptr;
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);

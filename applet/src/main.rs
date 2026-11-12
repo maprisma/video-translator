@@ -1,4 +1,5 @@
-// Maprisma Video Translator: the subtitles icon in the panel. Left click opens the menu
+// Maprisma Video Translator: the subtitles icon in the panel. Left click opens the menu (again:
+// closes it; Esc closes an open drop-down, then the menu)
 // (Start / Stop / Captions, what needs setting up, target language, input, caption size and the
 // Maprisma Video Translator window); right click starts or stops captions. A green line under the icon
 // while captions run.
@@ -114,6 +115,28 @@ enum Message {
     FontDone,
     OpenWindow,
     Released,
+}
+
+/// What Esc in a surface of the applet does, innermost first: the screenshot note (shot.rs skips
+/// it), an open drop-down (target language, input), then the popup; elsewhere nothing.
+#[derive(Debug, PartialEq)]
+enum Escape {
+    Note,
+    Collapse,
+    ClosePopup,
+    Nothing,
+}
+
+fn escape(id: window::Id, popup: Option<window::Id>, note: bool, expanded: bool) -> Escape {
+    if note {
+        Escape::Note
+    } else if popup != Some(id) {
+        Escape::Nothing
+    } else if expanded {
+        Escape::Collapse
+    } else {
+        Escape::ClosePopup
+    }
 }
 
 impl Translator {
@@ -376,6 +399,17 @@ impl cosmic::Application for Translator {
                 }
                 return look;
             }
+            Message::Shot(ShotMsg::Escape(id)) => {
+                return match escape(id, self.popup, self.shot.showing(id), self.expanded.is_some()) {
+                    Escape::Note => self.shot.update(ShotMsg::Escape(id), self.screenshot_key, true, Message::Shot),
+                    Escape::Collapse => {
+                        self.expanded = None;
+                        Task::none()
+                    }
+                    Escape::ClosePopup => self.close_popup(),
+                    Escape::Nothing => Task::none(),
+                };
+            }
             Message::Shot(message) => {
                 // F12 takes the open popup, not the panel button.
                 let ours = match &message {
@@ -548,5 +582,16 @@ mod tests {
         let (problem, fixes) = next_step(&failed).unwrap();
         assert_eq!(problem, "uv failed. Needs setup.");
         assert_eq!(fixes[0].requests, vec![json!({"action": "setup"})]);
+    }
+
+    #[test]
+    fn escape_goes_from_the_innermost_outwards() {
+        let popup = window::Id::unique();
+        let other = window::Id::unique();
+        assert_eq!(escape(popup, Some(popup), true, true), Escape::Note);
+        assert_eq!(escape(popup, Some(popup), false, true), Escape::Collapse);
+        assert_eq!(escape(popup, Some(popup), false, false), Escape::ClosePopup);
+        assert_eq!(escape(other, Some(popup), false, true), Escape::Nothing);
+        assert_eq!(escape(popup, None, false, false), Escape::Nothing);
     }
 }
