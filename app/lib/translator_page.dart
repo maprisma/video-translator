@@ -9,6 +9,8 @@ import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 
+import 'app_look.dart';
+import 'app_theme.dart';
 import 'bridge.dart';
 import 'i18n.dart';
 import 'look.dart';
@@ -165,7 +167,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
               controller: _scroll,
               child: ListView(
                 controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                padding: const EdgeInsets.all(AppSpace.lg),
                 children: [
                   _languageGroup(),
                   _statusGroup(),
@@ -197,7 +199,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
 
   /// Settings › Corners and F12 saves a screenshot (look.dart; the applet and tray read them too).
   List<Widget> _lookRows() {
-    final desktop = desktopRadius(Theme.of(context).brightness);
+    final desktop = desktopLook.value.rounding;
     void save(void Function() write) {
       try {
         write();
@@ -232,15 +234,15 @@ class _TranslatorPageState extends State<TranslatorPage> {
     final anyError = checks.any((c) => c['status'] == 'error');
     return PrefGroup(children: [
       Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpace.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.subtitles_outlined, color: _running ? Colors.green : theme.colorScheme.primary),
-                const SizedBox(width: 10),
-                Expanded(child: Text(tr('Maprisma Video Translator'), style: theme.textTheme.titleMedium)),
+                Icon(Icons.subtitles_outlined, color: _running ? stateColors(context).ok : theme.colorScheme.primary),
+                const SizedBox(width: AppSpace.sm),
+                Expanded(child: Text(tr('Maprisma Video Translator'), style: theme.textTheme.titleSmall)),
                 FilledButton.icon(
                   onPressed: _ready && !_running && !stopping && _state['downloading'] != true && setup['busy'] != true
                       ? () => _send({'action': 'start'})
@@ -248,13 +250,13 @@ class _TranslatorPageState extends State<TranslatorPage> {
                   icon: const Icon(Icons.play_arrow),
                   label: Text(tr('Start')),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpace.sm),
                 OutlinedButton.icon(
                   onPressed: (_running || _state['overlay'] == true) && !stopping ? () => _send({'action': 'stop'}) : null,
                   icon: const Icon(Icons.stop),
                   label: Text(tr('Stop')),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpace.sm),
                 OutlinedButton(
                   onPressed: _runtimeReady ? () => _send({'action': 'show'}) : null,
                   child: Text(tr('Captions')),
@@ -263,9 +265,9 @@ class _TranslatorPageState extends State<TranslatorPage> {
             ),
             if (status.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: AppSpace.sm),
                 child: Text(tr(status),
-                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ),
           ],
         ),
@@ -287,7 +289,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
       PrefRow(title: step.text),
       for (final (index, fix) in step.fixes.indexed)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.md, vertical: AppSpace.xs),
           child: index == 0
               ? FilledButton(onPressed: () => _applyFix(fix), child: Text(fix.label))
               : OutlinedButton(onPressed: () => _applyFix(fix), child: Text(fix.label)),
@@ -441,7 +443,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
     return Sensitive(
       enabled: !_locked,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.md, vertical: AppSpace.xs),
         child: Row(children: [
           Expanded(
             child: TextField(
@@ -507,7 +509,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
       children: [
         if (_state['shortcuts'] == false && _runtimeReady)
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(AppSpace.md),
             child: OutlinedButton(
               onPressed: () => _send({'action': 'install-shortcuts'}),
               child: Text(tr('Add the video-trans command')),
