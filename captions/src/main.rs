@@ -31,6 +31,15 @@ use cosmic::iced::widget::{column as iced_column, container as iced_container, r
 use cosmic::iced::{Background, Border, Color, Event, Length, Limits, Point, Rectangle, Size, Subscription, mouse, window};
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
+
+// The applet's shared look.rs (the desktop's palette outside COSMIC) and the corners.rs it builds
+// on; only the accent is used here (the caption theme's border).
+#[allow(dead_code)]
+#[path = "../../applet/src/corners.rs"]
+mod corners;
+#[allow(dead_code)]
+#[path = "../../applet/src/look.rs"]
+mod look;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 
 const POLL: Duration = Duration::from_millis(250);
@@ -551,7 +560,10 @@ impl cosmic::Application for Captions {
                     return Task::none();
                 }
                 self.polling = true;
-                let accent = hex(theme::active().cosmic().accent_color().into());
+                // The desktop's accent: COSMIC's theme, or (KDE, Hyprland) look.rs's palette,
+                // re-read at most every 5 s.
+                look::refresh();
+                let accent = hex(look::theme().unwrap_or_else(theme::active).cosmic().accent_color().into());
                 let mut payload = json!({
                     "action": "overlay-state",
                     "visible": self.surface.is_some(),

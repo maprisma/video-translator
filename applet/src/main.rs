@@ -26,6 +26,7 @@ use serde_json::{Value, json};
 use maprisma_video_translator_control::*;
 #[allow(dead_code)] // the shared copy of every Maprisma COSMIC app; not every part is used here
 mod corners;
+mod look;
 mod shot;
 mod shot_files;
 use shot::{Shot, ShotMsg};
@@ -38,7 +39,6 @@ const SHOT_FOLDER: &str = "Maprisma Video Translator";
 const FONT: (f32, f32) = (12.0, 64.0);
 static AUTOSIZE_ID: LazyLock<Id> = LazyLock::new(|| Id::new("maprisma-video-translator-autosize"));
 
-const GREEN: Color = Color::from_rgb(0x33 as f32 / 255.0, 0xd1 as f32 / 255.0, 0x7a as f32 / 255.0);
 
 fn main() -> cosmic::iced::Result {
     cosmic::applet::run::<Translator>(())
@@ -63,9 +63,11 @@ fn dim_text(theme: &cosmic::Theme) -> iced_text::Style {
     iced_text::Style { color: Some(color), ..Default::default() }
 }
 
-fn fill(color: Color, radius: f32) -> theme::Container<'static> {
-    theme::Container::custom(move |_| iced_container::Style {
-        background: Some(Background::Color(color)),
+/// The line under the panel icon while translating: the theme's success colour (the desktop's
+/// green).
+fn running_line(radius: f32) -> theme::Container<'static> {
+    theme::Container::custom(move |theme| iced_container::Style {
+        background: Some(Background::Color(theme.cosmic().success_color().into())),
         border: Border { radius: radius.into(), ..Default::default() },
         ..Default::default()
     })
@@ -126,11 +128,12 @@ impl Translator {
             container(space::horizontal())
                 .width(Length::Fixed(size as f32))
                 .height(Length::Fixed(2.0))
-                .class(fill(GREEN, 1.0))
+                .class(running_line(corners::now().small.min(1.0)))
                 .into()
         } else {
             space::vertical().height(Length::Fixed(2.0)).into()
         };
+        // 2 px: the panel's icon slot (not a layout gap), as the Omarchy original.
         column![subtitles, line].spacing(2).align_x(Alignment::Center).into()
     }
 
@@ -161,7 +164,7 @@ impl Translator {
             }
         }
         let header = row![icon::from_name(ICON).size(24).symbolic(true).icon(), text::body(status.iter().map(|s| tr(s)).collect::<Vec<_>>().join("\n")).width(Length::Fill)]
-            .spacing(10)
+            .spacing(12)
             .align_y(Alignment::Center);
 
         let control = |icon_name: &'static str, label: String, action: &'static str, enabled: bool| {
@@ -180,11 +183,11 @@ impl Translator {
             control("media-playback-stop-symbolic", tr("Stop"), "stop", (self.running || flag(state, "overlay")) && !stopping),
             control(ICON, tr("Captions"), "show", runtime_ready),
         ]
-        .spacing(6);
+        .spacing(8);
 
-        let mut top = column![header, controls].spacing(10);
+        let mut top = column![header, controls].spacing(12);
         if let Some((problem, fixes)) = loaded.then(|| next_step(state)).flatten() {
-            let mut block = column![text::caption(problem).class(theme::Text::Custom(dim_text))].spacing(6);
+            let mut block = column![text::caption(problem).class(theme::Text::Custom(dim_text))].spacing(8);
             for (index, fix) in fixes.iter().enumerate() {
                 let face = if index == 0 { button::suggested(fix.label.clone()) } else { button::standard(fix.label.clone()) };
                 block = block.push(face.width(Length::Fill).on_press_maybe(idle.then_some(Message::Fix(index))));
@@ -240,7 +243,7 @@ impl Translator {
                     slider(FONT.0..=FONT.1, font, Message::Font).step(1.0_f32).on_release(Message::FontDone),
                     text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(48.0)),
                 ]
-                .spacing(10)
+                .spacing(12)
                 .align_y(Alignment::Center),
             ));
             actions = actions.push(
@@ -285,6 +288,9 @@ impl Translator {
         self.screenshot_key = screenshot_key;
         self.corners = corners::normalize(&corners).to_string();
         corners::set_current(&self.corners);
+        // The desktop's colours and corners (Maprisma Theme can change them any time); the
+        // popup's view reads them (corners::apply), this only re-reads them (at most every 5 s).
+        look::refresh();
         Task::none()
     }
 
