@@ -500,7 +500,10 @@ impl cosmic::Application for Captions {
         &mut self.core
     }
 
-    fn init(core: Core, _flags: ()) -> (Self, Task<Message>) {
+    fn init(mut core: Core, _flags: ()) -> (Self, Task<Message>) {
+        // The surface covers the whole output. libcosmic's automatic blur (frosted system
+        // interface) would ask the compositor to blur everything behind it, i.e. the whole screen.
+        core.set_auto_blur(Default::default());
         (Self { core, ..Default::default() }, Task::done(cosmic::Action::App(Message::Poll)))
     }
 
