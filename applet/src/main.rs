@@ -34,6 +34,8 @@ use shot::{Shot, ShotMsg};
 
 const APP_ID: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator";
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
+/// The bar's outline subtitles while no captions run (as the tray shows it).
+const ICON_OFF: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-off-symbolic";
 const POPUP_WIDTH: f32 = 360.0;
 /// F12's folder in ~/Pictures and (as a slug) its file names (the window's too).
 const SHOT_FOLDER: &str = "Maprisma Video Translator";
@@ -146,7 +148,7 @@ impl Translator {
 
     fn panel_content(&self) -> Element<'_, Message> {
         let size = self.core.applet.suggested_size(true).0;
-        let subtitles = icon::from_name(ICON).size(size).symbolic(true).icon();
+        let subtitles = icon::from_name(if self.running { ICON } else { ICON_OFF }).size(size).symbolic(true).icon();
         let line: Element<Message> = if self.running {
             container(space::horizontal())
                 .width(Length::Fixed(size as f32))

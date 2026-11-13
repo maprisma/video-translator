@@ -25,7 +25,9 @@ install -Dm755 target/release/maprisma-video-translator-tray "$bin/maprisma-vide
 install -Dm755 target/release/maprisma-video-translator-captions "$bin/maprisma-video-translator-captions"
 # The bar icon (applet and tray) has a name of its own, so it can be changed without touching a theme.
 icon=io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic
-install -Dm644 "data/icons/$icon.svg" "$data/icons/hicolor/scalable/apps/$icon.svg"
+for name in "$icon" "${icon%-symbolic}-off-symbolic"; do  # filled while captions run, outline otherwise
+  install -Dm644 "data/icons/$name.svg" "$data/icons/hicolor/scalable/apps/$name.svg"
+done
 gtk-update-icon-cache -q -t "$data/icons/hicolor" 2>/dev/null || true
 
 mkdir -p "$data/maprisma-video-translator"

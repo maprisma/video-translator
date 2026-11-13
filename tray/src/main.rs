@@ -13,6 +13,12 @@ type Props = HashMap<String, OwnedValue>;
 type Layout = (i32, Props, Vec<OwnedValue>);
 type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
+/// The outline subtitles while no captions run (data/icons/…-off-symbolic.svg).
+const ICON_OFF: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-off-symbolic";
+/// The bar icon, as the applet draws it: filled while captions run, else the outline.
+fn icon_for(value: &Value) -> &'static str {
+    if flag(value, "running") { ICON } else { ICON_OFF }
+}
 struct State {
     value: Value,
     busy: bool,
@@ -206,8 +212,8 @@ impl Tray {
         0
     }
     #[zbus(property)]
-    fn icon_name(&self) -> &str {
-        ICON
+    async fn icon_name(&self) -> &str {
+        icon_for(&self.state.lock().await.value)
     }
     #[zbus(property)]
     fn icon_pixmap(&self) -> Pixmaps {
@@ -223,7 +229,7 @@ impl Tray {
     }
     #[zbus(property)]
     fn attention_icon_name(&self) -> &str {
-        "media-playback-start-symbolic"
+        ICON
     }
     #[zbus(property)]
     fn attention_icon_pixmap(&self) -> Pixmaps {
@@ -270,6 +276,8 @@ impl Tray {
     async fn new_status(emitter: &SignalEmitter<'_>, status: &str) -> zbus::Result<()>;
     #[zbus(signal)]
     async fn new_tool_tip(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
+    #[zbus(signal)]
+    async fn new_icon(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
 }
 async fn publish(
     connection: &Connection,
@@ -296,6 +304,7 @@ async fn publish(
         Tray::new_tool_tip(&SignalEmitter::new(connection, "/StatusNotifierItem")?).await?;
     }
     if running != old_status {
+        Tray::new_icon(&SignalEmitter::new(connection, "/StatusNotifierItem")?).await?;
         Tray::new_status(
             &SignalEmitter::new(connection, "/StatusNotifierItem")?,
             if running { "NeedsAttention" } else { "Active" },
@@ -418,6 +427,13 @@ mod tests {
         let filtered = properties(&check, &["toggle-state".into()]);
         assert_eq!(filtered.len(), 1);
         assert_eq!(i32::try_from(filtered["toggle-state"].try_clone().unwrap()).unwrap(), 1);
+    }
+
+    #[test]
+    fn bar_icon_follows_the_captions() {
+        assert_eq!(icon_for(&json!({"running":true})), ICON);
+        assert_eq!(icon_for(&json!({"running":false,"overlay":true})), ICON_OFF);
+        assert_eq!(icon_for(&Value::Null), ICON_OFF);
     }
 
     #[tokio::test]
