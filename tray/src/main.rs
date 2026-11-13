@@ -13,11 +13,13 @@ type Props = HashMap<String, OwnedValue>;
 type Layout = (i32, Props, Vec<OwnedValue>);
 type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
+/// The filled subtitles in the accent colour (ColorScheme-Highlight) while captions run.
+const ICON_ACTIVE: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-active-symbolic";
 /// The outline subtitles while no captions run (data/icons/…-off-symbolic.svg).
 const ICON_OFF: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-off-symbolic";
-/// The bar icon, as the applet draws it: filled while captions run, else the outline.
+/// The bar icon, as the applet draws it: accent-coloured while captions run, else the outline.
 fn icon_for(value: &Value) -> &'static str {
-    if flag(value, "running") { ICON } else { ICON_OFF }
+    if flag(value, "running") { ICON_ACTIVE } else { ICON_OFF }
 }
 struct State {
     value: Value,
@@ -229,7 +231,7 @@ impl Tray {
     }
     #[zbus(property)]
     fn attention_icon_name(&self) -> &str {
-        ICON
+        ICON_ACTIVE
     }
     #[zbus(property)]
     fn attention_icon_pixmap(&self) -> Pixmaps {
@@ -431,7 +433,10 @@ mod tests {
 
     #[test]
     fn bar_icon_follows_the_captions() {
-        assert_eq!(icon_for(&json!({"running":true})), ICON);
+        assert_eq!(icon_for(&json!({"running":true})), ICON_ACTIVE);
+        assert!(ICON_ACTIVE.ends_with("-active-symbolic"), "Maprisma Shell tints -active-symbolic icons");
+        let svg = include_str!("../../data/icons/io.github.ubruckhaus.CosmicMaprismaVideoTranslator-active-symbolic.svg");
+        assert!(svg.contains("ColorScheme-Highlight") && !svg.contains("ColorScheme-Text"));
         assert_eq!(icon_for(&json!({"running":false,"overlay":true})), ICON_OFF);
         assert_eq!(icon_for(&Value::Null), ICON_OFF);
     }

@@ -16,7 +16,7 @@ use cosmic::app::{Core, Task};
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::destroy_popup;
-use cosmic::iced::widget::{container as iced_container, text as iced_text};
+use cosmic::iced::widget::{container as iced_container, svg as iced_svg, text as iced_text};
 use cosmic::iced::{Alignment, Background, Border, Color, Length, Rectangle, Subscription, stream, window};
 use cosmic::widget::rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription};
 use cosmic::widget::{
@@ -68,6 +68,11 @@ fn dim_text(theme: &cosmic::Theme) -> iced_text::Style {
 
 /// The line under the panel icon while translating: the theme's success colour (the desktop's
 /// green).
+// The running subtitles: the desktop's accent, as the tray's -active-symbolic icon.
+fn accent_svg() -> theme::Svg {
+    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().accent_color().into()) })
+}
+
 fn running_line(radius: f32) -> theme::Container<'static> {
     theme::Container::custom(move |theme| iced_container::Style {
         background: Some(Background::Color(theme.cosmic().success_color().into())),
@@ -149,6 +154,7 @@ impl Translator {
     fn panel_content(&self) -> Element<'_, Message> {
         let size = self.core.applet.suggested_size(true).0;
         let subtitles = icon::from_name(if self.running { ICON } else { ICON_OFF }).size(size).symbolic(true).icon();
+        let subtitles = if self.running { subtitles.class(accent_svg()) } else { subtitles };
         let line: Element<Message> = if self.running {
             container(space::horizontal())
                 .width(Length::Fixed(size as f32))
