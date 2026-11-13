@@ -45,10 +45,21 @@ def status_path():
     return runtime_dir() / f'video-trans-setup-{os.getuid()}.json'
 
 
+def hyprland_socket(env):
+    """Whether HYPRLAND_INSTANCE_SIGNATURE names a running instance: its socket exists."""
+    signature = env.get('HYPRLAND_INSTANCE_SIGNATURE', '').strip()
+    runtime = env.get('XDG_RUNTIME_DIR', '')
+    if not signature or not runtime or signature.startswith('.') or '/' in signature:
+        return False
+    return (Path(runtime) / 'hypr' / signature / '.socket.sock').exists()
+
+
 def desktop(env=None):
     """cosmic / kde / hyprland / other, as the apps' look.rs and desktop_look.dart decide: from
     XDG_CURRENT_DESKTOP, else (a process started outside the session's environment) from
-    XDG_SESSION_DESKTOP / DESKTOP_SESSION, then HYPRLAND_INSTANCE_SIGNATURE and KDE_FULL_SESSION."""
+    XDG_SESSION_DESKTOP / DESKTOP_SESSION, then HYPRLAND_INSTANCE_SIGNATURE (only with its socket:
+    a stale one stays in the systemd user environment after a Hyprland session) and
+    KDE_FULL_SESSION."""
     env = os.environ if env is None else env
     current = env.get('XDG_CURRENT_DESKTOP', '').strip()
     if current:
@@ -65,7 +76,7 @@ def desktop(env=None):
             return 'kde'
         if name.startswith('hyprland'):
             return 'hyprland'
-    if env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+    if hyprland_socket(env):
         return 'hyprland'
     if env.get('KDE_FULL_SESSION', '').lower() == 'true':
         return 'kde'

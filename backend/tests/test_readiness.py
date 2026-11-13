@@ -206,7 +206,16 @@ class DesktopPackageTests(unittest.TestCase):
         self.assertEqual(readiness.desktop({'XDG_SESSION_DESKTOP': 'KDE'}), 'kde')
         self.assertEqual(readiness.desktop({'DESKTOP_SESSION': '/usr/share/wayland-sessions/plasma.desktop'}), 'kde')
         self.assertEqual(readiness.desktop({'DESKTOP_SESSION': 'cosmic'}), 'cosmic')
-        self.assertEqual(readiness.desktop({'HYPRLAND_INSTANCE_SIGNATURE': 'x'}), 'hyprland')
+        with tempfile.TemporaryDirectory() as run:
+            (Path(run) / 'hypr/live').mkdir(parents=True)
+            (Path(run) / 'hypr/live/.socket.sock').touch()
+            (Path(run) / 'hypr/stale').mkdir(parents=True)
+            self.assertEqual(readiness.desktop({'HYPRLAND_INSTANCE_SIGNATURE': 'live', 'XDG_RUNTIME_DIR': run}), 'hyprland')
+            # A signature left over from an earlier Hyprland session: no socket, not Hyprland.
+            self.assertEqual(readiness.desktop({'HYPRLAND_INSTANCE_SIGNATURE': 'stale', 'XDG_RUNTIME_DIR': run}), 'other')
+            self.assertEqual(readiness.desktop({'HYPRLAND_INSTANCE_SIGNATURE': 'x'}), 'other')
+            # XDG_CURRENT_DESKTOP decides even with a live socket.
+            self.assertEqual(readiness.desktop({'XDG_CURRENT_DESKTOP': 'KDE', 'HYPRLAND_INSTANCE_SIGNATURE': 'live', 'XDG_RUNTIME_DIR': run}), 'kde')
         self.assertEqual(readiness.desktop({'XDG_CURRENT_DESKTOP': 'GNOME', 'KDE_FULL_SESSION': 'true'}), 'other')
         self.assertEqual(readiness.desktop({}), 'other')
 

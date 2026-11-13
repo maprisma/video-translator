@@ -55,6 +55,19 @@ void main() {
     expect(shortcutsHint({'XDG_CURRENT_DESKTOP': 'GNOME', 'HOME': '/h'}), isNot(contains('COSMIC')));
   });
 
+  testWidgets('the controller does not answer: the error and Try again, no endless spinner', (tester) async {
+    final bridge = FakeBridge({'error': 'Maprisma Video Translator: the caption controller did not answer.'});
+    await pump(tester, bridge);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('The caption controller could not be reached'), findsOneWidget);
+    expect(find.text('Maprisma Video Translator: the caption controller did not answer.'), findsOneWidget);
+    bridge.state = readyState();
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(find.text('The caption controller could not be reached'), findsNothing);
+    expect(find.text('Start'), findsOneWidget);
+  });
+
   testWidgets('ready: Start sends start', (tester) async {
     final bridge = FakeBridge(readyState());
     await pump(tester, bridge);

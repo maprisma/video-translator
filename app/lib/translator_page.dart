@@ -44,6 +44,9 @@ class _TranslatorPageState extends State<TranslatorPage> {
   Json _state = {};
   Timer? _timer;
   bool _polling = false;
+  // Why the first state didn't come (the helper's socket or bridge failed): shown instead of an
+  // endless spinner, with Try again; null while waiting or once a state came.
+  String? _loadError;
   late final AppLifecycleListener _lifecycle;
 
   final _endpoint = TextEditingController();
@@ -110,7 +113,14 @@ class _TranslatorPageState extends State<TranslatorPage> {
     // hold: the controller stays while this window is open, even when the panel menu closes.
     final state = await widget.bridge.request({'action': 'state', 'hold': true});
     _polling = false;
-    if (mounted && state['error'] == null) _update(state);
+    if (!mounted) return;
+    if (state['error'] == null && state['settings'] is Map) {
+      _loadError = null;
+      _update(state);
+    } else if (!_loaded) {
+      final error = state['error'];
+      setState(() => _loadError = error == null ? tr('Maprisma Video Translator: unexpected answer from the caption controller') : tr('$error'));
+    }
   }
 
   void _update(Json state) {
@@ -160,11 +170,38 @@ class _TranslatorPageState extends State<TranslatorPage> {
 
   // ------------------------------------------------------------------- build
 
+  /// The first state didn't come: what went wrong and one action (layout rule: never a blank
+  /// area or an endless spinner).
+  Widget _loadFailed(String error) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(tr('The caption controller could not be reached'), style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpace.xs),
+            SelectableText(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
+            const SizedBox(height: AppSpace.md),
+            FilledButton(
+              onPressed: () {
+                setState(() => _loadError = null);
+                _refresh();
+              },
+              child: Text(tr('Try again')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: !_loaded
-          ? const Center(child: CircularProgressIndicator())
+          ? (_loadError == null ? const Center(child: CircularProgressIndicator()) : _loadFailed(_loadError!))
           : Scrollbar(
               controller: _scroll,
               child: ListView(
