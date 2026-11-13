@@ -45,8 +45,36 @@ def status_path():
     return runtime_dir() / f'video-trans-setup-{os.getuid()}.json'
 
 
+def desktop(env=None):
+    """cosmic / kde / hyprland / other, as the apps' look.rs and desktop_look.dart decide: from
+    XDG_CURRENT_DESKTOP, else (a process started outside the session's environment) from
+    XDG_SESSION_DESKTOP / DESKTOP_SESSION, then HYPRLAND_INSTANCE_SIGNATURE and KDE_FULL_SESSION."""
+    env = os.environ if env is None else env
+    current = env.get('XDG_CURRENT_DESKTOP', '').strip()
+    if current:
+        names = current.upper().split(':')
+        for name, key in (('COSMIC', 'cosmic'), ('KDE', 'kde'), ('HYPRLAND', 'hyprland')):
+            if name in names:
+                return key
+        return 'other'
+    for part in (env.get('XDG_SESSION_DESKTOP', '') + ':' + env.get('DESKTOP_SESSION', '')).split(':'):
+        name = part.rsplit('/', 1)[-1].removesuffix('.desktop').lower()
+        if name == 'cosmic' or name.startswith('cosmic-'):
+            return 'cosmic'
+        if name == 'kde' or name.startswith('plasma'):
+            return 'kde'
+        if name.startswith('hyprland'):
+            return 'hyprland'
+    if env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        return 'hyprland'
+    if env.get('KDE_FULL_SESSION', '').lower() == 'true':
+        return 'kde'
+    return 'other'
+
+
 def missing_packages():
-    kde = 'KDE' in os.environ.get('XDG_CURRENT_DESKTOP', '').upper()
+    # KWin has no wlr-screencopy: grim (caption colour sampling) is not needed there.
+    kde = desktop() == 'kde'
     return [package for command, package in PACKAGES.items()
             if not (kde and command == 'grim') and not shutil.which(command)]
 

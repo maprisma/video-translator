@@ -199,6 +199,17 @@ class DesktopPackageTests(unittest.TestCase):
         with patch.dict(os.environ, XDG_CURRENT_DESKTOP='KDE'), patch.object(readiness.shutil, 'which', return_value=None):
             self.assertEqual(readiness.missing_packages(), ['ffmpeg', 'libpulse', 'uv'])
 
+    def test_kde_without_xdg_current_desktop(self):
+        env = {k: v for k, v in os.environ.items() if k not in ('XDG_CURRENT_DESKTOP', 'XDG_SESSION_DESKTOP', 'DESKTOP_SESSION', 'HYPRLAND_INSTANCE_SIGNATURE', 'KDE_FULL_SESSION')}
+        with patch.dict(os.environ, env, clear=True), patch.dict(os.environ, KDE_FULL_SESSION='true'), patch.object(readiness.shutil, 'which', return_value=None):
+            self.assertNotIn('grim', readiness.missing_packages())
+        self.assertEqual(readiness.desktop({'XDG_SESSION_DESKTOP': 'KDE'}), 'kde')
+        self.assertEqual(readiness.desktop({'DESKTOP_SESSION': '/usr/share/wayland-sessions/plasma.desktop'}), 'kde')
+        self.assertEqual(readiness.desktop({'DESKTOP_SESSION': 'cosmic'}), 'cosmic')
+        self.assertEqual(readiness.desktop({'HYPRLAND_INSTANCE_SIGNATURE': 'x'}), 'hyprland')
+        self.assertEqual(readiness.desktop({'XDG_CURRENT_DESKTOP': 'GNOME', 'KDE_FULL_SESSION': 'true'}), 'other')
+        self.assertEqual(readiness.desktop({}), 'other')
+
     def test_cosmic_still_requires_grim(self):
         with patch.dict(os.environ, XDG_CURRENT_DESKTOP='COSMIC'), patch.object(readiness.shutil, 'which', return_value=None):
             self.assertIn('grim', readiness.missing_packages())

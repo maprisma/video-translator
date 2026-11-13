@@ -147,11 +147,9 @@ fn ppm_luminance(data: &[u8]) -> Option<f64> {
 
 // A failed capture disables sampling for this helper's lifetime. KWin has layer-shell
 // but no wlr-screencopy; avoid even the first grim process there.
+// (look::desktop: also without XDG_CURRENT_DESKTOP, from the session's other marks.)
 fn sampling_available() -> bool {
-    !std::env::var("XDG_CURRENT_DESKTOP")
-        .unwrap_or_default()
-        .to_ascii_uppercase()
-        .contains("KDE")
+    look::desktop() != look::Desktop::Kde
 }
 async fn sample(region: Rectangle) -> Option<f64> {
     if !sampling_available() {
