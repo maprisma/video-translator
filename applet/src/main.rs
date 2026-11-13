@@ -68,9 +68,9 @@ fn dim_text(theme: &cosmic::Theme) -> iced_text::Style {
 
 /// The line under the panel icon while translating: the theme's success colour (the desktop's
 /// green).
-// The running subtitles: the desktop's accent, as the tray's -active-symbolic icon.
-fn accent_svg() -> theme::Svg {
-    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().accent_color().into()) })
+// The running subtitles: the desktop's green, as Hue's lit bulb and the tray's -active-symbolic icon.
+fn lit_svg() -> theme::Svg {
+    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().success_color().into()) })
 }
 
 fn running_line(radius: f32) -> theme::Container<'static> {
@@ -154,7 +154,7 @@ impl Translator {
     fn panel_content(&self) -> Element<'_, Message> {
         let size = self.core.applet.suggested_size(true).0;
         let subtitles = icon::from_name(if self.running { ICON } else { ICON_OFF }).size(size).symbolic(true).icon();
-        let subtitles = if self.running { subtitles.class(accent_svg()) } else { subtitles };
+        let subtitles = if self.running { subtitles.class(lit_svg()) } else { subtitles };
         let line: Element<Message> = if self.running {
             container(space::horizontal())
                 .width(Length::Fixed(size as f32))
