@@ -1,7 +1,7 @@
 // Maprisma Video Translator: the subtitles icon in the panel. Left click opens the menu (again:
 // closes it; Esc closes an open drop-down, then the menu)
 // (Start / Stop / Captions, what needs setting up, target language, input, caption size and the
-// Maprisma Video Translator window); right click starts or stops captions. A green line under the icon
+// Maprisma Video Translator window); right click starts or stops captions. An accent-coloured line under the icon
 // while captions run.
 //
 // The caption controller (backend/gui.py, hidden) is reached through backend/bridge.sh like the
@@ -66,16 +66,15 @@ fn dim_text(theme: &cosmic::Theme) -> iced_text::Style {
     iced_text::Style { color: Some(color), ..Default::default() }
 }
 
-/// The line under the panel icon while translating: the theme's success colour (the desktop's
-/// green).
-// The running subtitles: the desktop's green, as Hue's lit bulb and the tray's -active-symbolic icon.
+/// The line under the panel icon while translating: the theme accent, as the icon.
+// The running subtitles: the theme accent, as Hue's lit bulb and the tray's -active-symbolic icon.
 fn lit_svg() -> theme::Svg {
-    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().success_color().into()) })
+    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().accent_color().into()) })
 }
 
 fn running_line(radius: f32) -> theme::Container<'static> {
     theme::Container::custom(move |theme| iced_container::Style {
-        background: Some(Background::Color(theme.cosmic().success_color().into())),
+        background: Some(Background::Color(theme.cosmic().accent_color().into())),
         border: Border { radius: radius.into(), ..Default::default() },
         ..Default::default()
     })

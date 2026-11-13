@@ -13,7 +13,7 @@ type Props = HashMap<String, OwnedValue>;
 type Layout = (i32, Props, Vec<OwnedValue>);
 type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
-/// The filled subtitles in the theme green (ColorScheme-PositiveText) while captions run.
+/// The filled subtitles in the theme accent (ColorScheme-Highlight) while captions run.
 const ICON_ACTIVE: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-active-symbolic";
 /// The outline subtitles while no captions run (data/icons/…-off-symbolic.svg).
 const ICON_OFF: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-off-symbolic";
@@ -436,7 +436,7 @@ mod tests {
         assert_eq!(icon_for(&json!({"running":true})), ICON_ACTIVE);
         assert!(ICON_ACTIVE.ends_with("-active-symbolic"), "Maprisma Shell tints -active-symbolic icons");
         let svg = include_str!("../../data/icons/io.github.ubruckhaus.CosmicMaprismaVideoTranslator-active-symbolic.svg");
-        assert!(svg.contains("ColorScheme-PositiveText") && !svg.contains("ColorScheme-Text {"));
+        assert!(svg.contains("ColorScheme-Highlight") && !svg.contains("ColorScheme-Text {"));
         assert_eq!(icon_for(&json!({"running":false,"overlay":true})), ICON_OFF);
         assert_eq!(icon_for(&Value::Null), ICON_OFF);
     }
