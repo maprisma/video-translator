@@ -5,6 +5,7 @@
 // every 1.5 s while the window is open.
 
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'app_look.dart';
 import 'app_theme.dart';
 import 'bridge.dart';
+import 'desktop_look.dart' show desktopName;
 import 'i18n.dart';
 import 'look.dart';
 import 'widgets.dart';
@@ -505,7 +507,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
   Widget _shortcutsGroup() {
     return PrefGroup(
       title: tr('Keyboard shortcuts'),
-      description: tr('In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.'),
+      description: shortcutsHint(Platform.environment),
       children: [
         if (_state['shortcuts'] == false && _runtimeReady)
           Padding(
@@ -543,5 +545,22 @@ class _TranslatorPageState extends State<TranslatorPage> {
         onChanged: (v) => _number(key, v),
       ),
     ]);
+  }
+}
+
+/// Where this desktop's own shortcut settings are, for the Keyboard shortcuts card. Each key
+/// press runs the command once (no hold/release). KDE and the others get the full path: their
+/// command shortcuts don't always have ~/.local/bin in PATH.
+String shortcutsHint(Map<String, String> env) {
+  final command = '${env['HOME'] ?? '~'}/.local/bin/video-trans';
+  switch (desktopName(env)) {
+    case 'cosmic':
+      return tr('In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.');
+    case 'kde':
+      return trf('In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.', [command]);
+    case 'hyprland':
+      return trf('Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.', [command]);
+    default:
+      return trf('In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.', [command]);
   }
 }

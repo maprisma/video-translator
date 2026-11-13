@@ -1,6 +1,7 @@
 {
   "API key or bearer token": "API-sleutel of Bearer-token",
   "API key or bearer token · set": "API-sleutel of Bearer-token · ingesteld",
+  "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Voeg aan je Hyprland-configuratie een toetsbinding toe die een opdracht uitvoert zoals “{0} toggle”, “{0} font bigger” of “{0} text-color next”. Elke toetsaanslag voert die één keer uit. “video-trans help” in een terminal toont alle acties.",
   "Add the video-trans command": "De opdracht video-trans toevoegen",
   "An owner-only file, not a keychain": "Een bestand alleen voor de eigenaar, geen sleutelbos",
   "Arabic": "Arabisch",
@@ -73,6 +74,8 @@
   "Hide text": "Tekst verbergen",
   "Hindi": "Hindi",
   "In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.": "Voeg in COSMIC-instellingen → Invoerapparaten → Toetsenbord → Sneltoetsen → Aangepaste sneltoetsen een sneltoets toe met een opdracht zoals “video-trans toggle”, “video-trans font bigger” of “video-trans text-color next”. “video-trans help” in een terminal toont alle acties.",
+  "In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Kies in Systeeminstellingen → Toetsenbord → Sneltoetsen voor Nieuwe toevoegen → Opdracht of script en voer een opdracht in zoals “{0} toggle”, “{0} font bigger” of “{0} text-color next”. Elke toetsaanslag voert die één keer uit. “video-trans help” in een terminal toont alle acties.",
+  "In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Voeg in de sneltoetsinstellingen van je bureaublad een eigen sneltoets toe met een opdracht zoals “{0} toggle”, “{0} font bigger” of “{0} text-color next”. Elke toetsaanslag voert die één keer uit. “video-trans help” in een terminal toont alle acties.",
   "Increase": "Verhogen",
   "Indonesian": "Indonesisch",
   "Install ffmpeg and libpulse before starting.": "Installeer ffmpeg en libpulse voor het starten.",

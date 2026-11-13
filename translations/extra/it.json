@@ -1,6 +1,7 @@
 {
   "API key or bearer token": "Chiave API o token Bearer",
   "API key or bearer token · set": "Chiave API o token Bearer · impostato",
+  "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Aggiungi alla configurazione di Hyprland una scorciatoia che esegua un comando come «{0} toggle», «{0} font bigger» o «{0} text-color next». Ogni pressione lo esegue una volta. «video-trans help» in un terminale elenca tutte le azioni.",
   "Add the video-trans command": "Aggiungi il comando video-trans",
   "An owner-only file, not a keychain": "Un file accessibile solo al proprietario, non un portachiavi",
   "Arabic": "Arabo",
@@ -73,6 +74,8 @@
   "Hide text": "Nascondi testo",
   "Hindi": "Hindi",
   "In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.": "In Impostazioni COSMIC → Dispositivi di ingresso → Tastiera → Scorciatoie da tastiera → Scorciatoie personalizzate, aggiungi una scorciatoia con un comando come “video-trans toggle”, “video-trans font bigger” o “video-trans text-color next”. “video-trans help” nel terminale elenca tutte le azioni.",
+  "In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "In Impostazioni di sistema → Tastiera → Scorciatoie, scegli Aggiungi nuovo → Comando o script e inserisci un comando come «{0} toggle», «{0} font bigger» o «{0} text-color next». Ogni pressione lo esegue una volta. «video-trans help» in un terminale elenca tutte le azioni.",
+  "In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Nelle impostazioni delle scorciatoie da tastiera del tuo desktop, aggiungi una scorciatoia personalizzata con un comando come «{0} toggle», «{0} font bigger» o «{0} text-color next». Ogni pressione lo esegue una volta. «video-trans help» in un terminale elenca tutte le azioni.",
   "Increase": "Aumenta",
   "Indonesian": "Indonesiano",
   "Install ffmpeg and libpulse before starting.": "Installa ffmpeg e libpulse prima di avviare.",

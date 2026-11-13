@@ -44,6 +44,17 @@ Future<void> pump(WidgetTester tester, FakeBridge bridge) async {
 }
 
 void main() {
+  test('keyboard shortcut hints follow the desktop', () {
+    final cosmic = shortcutsHint({'XDG_CURRENT_DESKTOP': 'COSMIC', 'HOME': '/h'});
+    expect(cosmic, contains('COSMIC Settings'));
+    final kde = shortcutsHint({'XDG_CURRENT_DESKTOP': 'KDE', 'HOME': '/h'});
+    expect(kde, contains('System Settings'));
+    expect(kde, contains('/h/.local/bin/video-trans toggle'));
+    expect(kde, isNot(contains('COSMIC')));
+    expect(shortcutsHint({'XDG_CURRENT_DESKTOP': 'Hyprland', 'HOME': '/h'}), contains('Hyprland configuration'));
+    expect(shortcutsHint({'XDG_CURRENT_DESKTOP': 'GNOME', 'HOME': '/h'}), isNot(contains('COSMIC')));
+  });
+
   testWidgets('ready: Start sends start', (tester) async {
     final bridge = FakeBridge(readyState());
     await pump(tester, bridge);

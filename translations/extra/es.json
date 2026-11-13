@@ -1,6 +1,7 @@
 {
   "API key or bearer token": "Clave API o token Bearer",
   "API key or bearer token · set": "Clave API o token Bearer · configurado",
+  "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Añade a tu configuración de Hyprland un atajo que ejecute una orden como «{0} toggle», «{0} font bigger» o «{0} text-color next». Cada pulsación la ejecuta una vez. «video-trans help» en una terminal lista todas las acciones.",
   "Add the video-trans command": "Añadir el comando video-trans",
   "An owner-only file, not a keychain": "Un archivo solo para el propietario, no un llavero",
   "Arabic": "Árabe",
@@ -73,6 +74,8 @@
   "Hide text": "Ocultar texto",
   "Hindi": "Hindi",
   "In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.": "En Ajustes de COSMIC → Dispositivos de entrada → Teclado → Atajos de teclado → Atajos personalizados, añade un atajo con un comando como «video-trans toggle», «video-trans font bigger» o «video-trans text-color next». «video-trans help» en un terminal muestra todas las acciones.",
+  "In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "En Preferencias del sistema → Teclado → Atajos, elige Añadir nuevo → Orden o script e introduce una orden como «{0} toggle», «{0} font bigger» o «{0} text-color next». Cada pulsación la ejecuta una vez. «video-trans help» en una terminal lista todas las acciones.",
+  "In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "En los ajustes de atajos de teclado de tu escritorio, añade un atajo personalizado con una orden como «{0} toggle», «{0} font bigger» o «{0} text-color next». Cada pulsación la ejecuta una vez. «video-trans help» en una terminal lista todas las acciones.",
   "Increase": "Aumentar",
   "Indonesian": "Indonesio",
   "Install ffmpeg and libpulse before starting.": "Instala ffmpeg y libpulse antes de iniciar.",

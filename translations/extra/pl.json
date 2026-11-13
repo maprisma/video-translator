@@ -1,6 +1,7 @@
 {
   "API key or bearer token": "Klucz API lub token Bearer",
   "API key or bearer token · set": "Klucz API lub token Bearer · ustawiony",
+  "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Dodaj do konfiguracji Hyprlanda skrót, który uruchamia polecenie, np. „{0} toggle”, „{0} font bigger” lub „{0} text-color next”. Każde naciśnięcie uruchamia je raz. „video-trans help” w terminalu wypisuje wszystkie akcje.",
   "Add the video-trans command": "Dodaj polecenie video-trans",
   "An owner-only file, not a keychain": "Plik dostępny tylko dla właściciela, nie magazyn kluczy",
   "Arabic": "Arabski",
@@ -73,6 +74,8 @@
   "Hide text": "Ukryj tekst",
   "Hindi": "Hindi",
   "In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.": "W Ustawieniach COSMIC → Urządzenia wejściowe → Klawiatura → Skróty klawiszowe → Własne skróty dodaj skrót z poleceniem takim jak „video-trans toggle”, „video-trans font bigger” lub „video-trans text-color next”. „video-trans help” w terminalu wyświetla wszystkie działania.",
+  "In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "W Ustawieniach systemowych → Klawiatura → Skróty wybierz Dodaj nowy → Polecenie lub skrypt i wpisz polecenie, np. „{0} toggle”, „{0} font bigger” lub „{0} text-color next”. Każde naciśnięcie uruchamia je raz. „video-trans help” w terminalu wypisuje wszystkie akcje.",
+  "In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "W ustawieniach skrótów klawiszowych swojego pulpitu dodaj własny skrót z poleceniem, np. „{0} toggle”, „{0} font bigger” lub „{0} text-color next”. Każde naciśnięcie uruchamia je raz. „video-trans help” w terminalu wypisuje wszystkie akcje.",
   "Increase": "Zwiększ",
   "Indonesian": "Indonezyjski",
   "Install ffmpeg and libpulse before starting.": "Zainstaluj ffmpeg i libpulse przed uruchomieniem.",

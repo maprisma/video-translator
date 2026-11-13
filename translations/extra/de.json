@@ -1,6 +1,7 @@
 {
   "API key or bearer token": "API-Schlüssel oder Bearer-Token",
   "API key or bearer token · set": "API-Schlüssel oder Bearer-Token · gesetzt",
+  "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Legen Sie in Ihrer Hyprland-Konfiguration eine Tastenbelegung an, die einen Befehl wie „{0} toggle“, „{0} font bigger“ oder „{0} text-color next“ ausführt. Jeder Tastendruck führt ihn einmal aus. „video-trans help“ im Terminal listet alle Aktionen auf.",
   "Add the video-trans command": "Befehl video-trans hinzufügen",
   "An owner-only file, not a keychain": "Eine Datei nur für den Besitzer, kein Schlüsselbund",
   "Arabic": "Arabisch",
@@ -73,6 +74,8 @@
   "Hide text": "Text verbergen",
   "Hindi": "Hindi",
   "In COSMIC Settings → Input Devices → Keyboard → Keyboard shortcuts → Custom shortcuts, add a shortcut with a command such as “video-trans toggle”, “video-trans font bigger” or “video-trans text-color next”. “video-trans help” in a terminal lists every action.": "Füge unter COSMIC-Einstellungen → Eingabegeräte → Tastatur → Tastenkürzel → Eigene Tastenkürzel ein Kürzel mit einem Befehl wie „video-trans toggle“, „video-trans font bigger“ oder „video-trans text-color next“ hinzu. „video-trans help“ im Terminal zeigt alle Aktionen.",
+  "In System Settings → Keyboard → Shortcuts, choose Add New → Command or Script and enter a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Wählen Sie in den Systemeinstellungen → Tastatur → Kurzbefehle „Neu hinzufügen → Befehl oder Skript“ und geben Sie einen Befehl wie „{0} toggle“, „{0} font bigger“ oder „{0} text-color next“ ein. Jeder Tastendruck führt ihn einmal aus. „video-trans help“ im Terminal listet alle Aktionen auf.",
+  "In your desktop’s keyboard shortcut settings, add a custom shortcut with a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Legen Sie in den Tastenkürzel-Einstellungen Ihres Desktops ein eigenes Kürzel mit einem Befehl wie „{0} toggle“, „{0} font bigger“ oder „{0} text-color next“ an. Jeder Tastendruck führt ihn einmal aus. „video-trans help“ im Terminal listet alle Aktionen auf.",
   "Increase": "Erhöhen",
   "Indonesian": "Indonesisch",
   "Install ffmpeg and libpulse before starting.": "Installiere vor dem Start ffmpeg und libpulse.",
