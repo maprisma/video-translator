@@ -1,7 +1,8 @@
 // Maprisma Video Translator: the subtitles icon in the panel. Left click opens the menu (again:
-// closes it; Esc closes an open drop-down, then the menu)
-// (Start / Stop / Captions, what needs setting up, target language, input, caption size and the
-// Maprisma Video Translator window); right click starts or stops captions. An accent-coloured line under the icon
+// closes it; Esc closes an open drop-down, then leaves the settings page, then closes the menu)
+// (Start / Stop / Captions, what needs setting up, target language, input and the Maprisma Video
+// Translator window; the gear at the header's right end opens the settings page: Language, F12,
+// Corners, Follow new captions, caption size); right click starts or stops captions. An accent-coloured line under the icon
 // while captions run.
 //
 // The caption controller (backend/gui.py, hidden) is reached through backend/bridge.sh like the
@@ -20,7 +21,7 @@ use cosmic::iced::widget::{container as iced_container, svg as iced_svg, text as
 use cosmic::iced::{Alignment, Background, Border, Color, Length, Rectangle, Subscription, stream, window};
 use cosmic::widget::rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription};
 use cosmic::widget::{
-    Id, autosize, button, column, container, divider, icon, mouse_area, row, scrollable, slider, space, text, toggler,
+    Id, autosize, button, tooltip, column, container, divider, icon, mouse_area, row, scrollable, slider, space, text, toggler,
 };
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
@@ -87,6 +88,9 @@ fn running_line(radius: f32) -> theme::Container<'static> {
 enum Section {
     Target,
     Input,
+    /// Settings › Language and › Corners lists.
+    Language,
+    Corners,
 }
 
 #[derive(Default)]
@@ -103,6 +107,9 @@ struct Translator {
     shot: Shot,
     corners: String, // Settings › Corners (corners.rs)
     screenshot_key: bool,
+    /// The settings page (Language, F12, Corners, captions) shows instead of the menu.
+    settings_open: bool,
+    setting_error: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -122,25 +129,33 @@ enum Message {
     FontDone,
     OpenWindow,
     Released,
+    ToggleSettings,
+    Language(String),
+    Corners(String),
+    SetShotKey(bool),
 }
 
 /// What Esc in a surface of the applet does, innermost first: the screenshot note (shot.rs skips
-/// it), an open drop-down (target language, input), then the popup; elsewhere nothing.
+/// it), an open drop-down (target language, input, Language, Corners), the settings page, then
+/// the popup; elsewhere nothing.
 #[derive(Debug, PartialEq)]
 enum Escape {
     Note,
     Collapse,
+    Back,
     ClosePopup,
     Nothing,
 }
 
-fn escape(id: window::Id, popup: Option<window::Id>, note: bool, expanded: bool) -> Escape {
+fn escape(id: window::Id, popup: Option<window::Id>, note: bool, expanded: bool, settings: bool) -> Escape {
     if note {
         Escape::Note
     } else if popup != Some(id) {
         Escape::Nothing
     } else if expanded {
         Escape::Collapse
+    } else if settings {
+        Escape::Back
     } else {
         Escape::ClosePopup
     }
@@ -194,9 +209,18 @@ impl Translator {
                 status.push(format!("✕ {}: {}", tr(string(check, "label")), check_detail(check, state)));
             }
         }
-        let header = row![icon::from_name(ICON).size(24).symbolic(true).icon(), text::body(status.iter().map(|s| tr(s)).collect::<Vec<_>>().join("\n")).width(Length::Fill)]
-            .spacing(12)
-            .align_y(Alignment::Center);
+        // Settings at the header's right end, as in Maprisma Launcher.
+        let header = row![
+            icon::from_name(ICON).size(24).symbolic(true).icon(),
+            text::body(status.iter().map(|s| tr(s)).collect::<Vec<_>>().join("\n")).width(Length::Fill),
+            tooltip(
+                button::icon(icon::from_name("emblem-system-symbolic").symbolic(true)).on_press(Message::ToggleSettings),
+                text::body(tr("Settings")),
+                tooltip::Position::Bottom,
+            ),
+        ]
+        .spacing(12)
+        .align_y(Alignment::Center);
 
         let control = |icon_name: &'static str, label: String, action: &'static str, enabled: bool| {
             button::standard(label)
@@ -259,24 +283,6 @@ impl Translator {
                 }
             }
 
-            let follow = setting(state, "auto_scroll").and_then(Value::as_bool) != Some(false);
-            actions = actions.push(padded_control(
-                row![
-                    text::body(tr("Follow new captions")).width(Length::Fill),
-                    toggler(follow).on_toggle(|on| Message::Send(json!({"action": "configure", "settings": {"auto_scroll": on}}))),
-                ]
-                .align_y(Alignment::Center),
-            ));
-            let font = self.font.unwrap_or_else(|| self.settings_font());
-            actions = actions.push(padded_control(
-                row![
-                    icon::from_name("preferences-desktop-font-symbolic").size(16).symbolic(true),
-                    slider(FONT.0..=FONT.1, font, Message::Font).step(1.0_f32).on_release(Message::FontDone),
-                    text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(48.0)),
-                ]
-                .spacing(12)
-                .align_y(Alignment::Center),
-            ));
             actions = actions.push(
                 menu_button(text::body(tr("Clear captions")))
                     .on_press_maybe(runtime_ready.then(|| Message::Send(json!({"action": "clear"})))),
@@ -290,6 +296,95 @@ impl Translator {
             .width(Length::Fixed(POPUP_WIDTH))
             .padding([0, 0, 8, 0])
             .into()
+    }
+
+    /// Settings (as Maprisma Launcher's page): ← Back and the title, then one row per setting,
+    /// words at the left and the control at the right; a list opens under its row.
+    fn settings_page(&self) -> Element<'_, Message> {
+        let header = row![
+            button::text(tr("Back")).leading_icon(icon::from_name("go-previous-symbolic").size(16)).on_press(Message::ToggleSettings),
+            space::horizontal().width(Length::Fill),
+            text::body(tr("Settings").to_uppercase()).class(theme::Text::Custom(dim_text)),
+        ]
+        .align_y(Alignment::Center);
+        let choice = |label: String, section: Section| -> Element<'_, Message> {
+            let open = self.expanded == Some(section);
+            button::text(label)
+                .trailing_icon(icon::from_name(if open { "pan-up-symbolic" } else { "pan-down-symbolic" }).size(16))
+                .on_press(Message::Expand(section))
+                .into()
+        };
+        let row_of = |label: String, control: Element<'static, Message>| {
+            padded_control(row![text::body(label), space::horizontal().width(Length::Fill), control].spacing(12).align_y(Alignment::Center))
+        };
+        let mut page = column![padded_control(header), divider::horizontal::default()];
+
+        let saved = i18n::saved_language();
+        let system = i18n::system_language(&std::env::vars().collect());
+        let system_name = i18n::LANGUAGE_NAMES.iter().find(|(c, _)| *c == system).map_or("English", |(_, n)| n);
+        let languages: Vec<(String, String)> = std::iter::once(("auto".to_string(), trf("System ({0})", &[system_name])))
+            .chain(i18n::LANGUAGE_NAMES.iter().map(|(c, n)| (c.to_string(), n.to_string())))
+            .collect();
+        let current = languages.iter().find(|(c, _)| *c == saved).map(|(_, l)| l.clone()).unwrap_or_default();
+        page = page.push(row_of(tr("Language"), choice(current, Section::Language)));
+        if self.expanded == Some(Section::Language) {
+            for (code, label) in languages {
+                let label = if code == saved { format!("✓ {label}") } else { label };
+                page = page.push(menu_button(text::body(label)).on_press(Message::Language(code)));
+            }
+        }
+
+        page = page.push(row_of(tr("F12 saves a screenshot"), toggler(self.screenshot_key).on_toggle(Message::SetShotKey).into()));
+
+        let desktop = corners::desktop_radius().round().to_string();
+        let corner_choices = [
+            ("desktop", trf("Like the desktop ({0} px)", &[&desktop])),
+            ("slight", trf("Slightly rounded ({0} px)", &["6"])),
+            ("rounded", trf("Rounded ({0} px)", &["12"])),
+            ("square", tr("Square")),
+        ];
+        let current = corner_choices.iter().find(|(c, _)| *c == self.corners).map(|(_, l)| l.clone()).unwrap_or_default();
+        page = page.push(row_of(tr("Corners"), choice(current, Section::Corners)));
+        if self.expanded == Some(Section::Corners) {
+            for (code, label) in corner_choices {
+                let label = if self.corners == code { format!("✓ {label}") } else { label };
+                page = page.push(menu_button(text::body(label)).on_press(Message::Corners(code.into())));
+            }
+        }
+
+        // The captions' own settings (the controller keeps them), once its state is in.
+        if self.state.get("settings").is_some() {
+            let follow = setting(&self.state, "auto_scroll").and_then(Value::as_bool) != Some(false);
+            page = page.push(row_of(
+                tr("Follow new captions"),
+                toggler(follow)
+                    .on_toggle(|on| Message::Send(json!({"action": "configure", "settings": {"auto_scroll": on}})))
+                    .into(),
+            ));
+            let font = self.font.unwrap_or_else(|| self.settings_font());
+            page = page.push(row_of(
+                tr("Caption font size"),
+                row![
+                    slider(FONT.0..=FONT.1, font, Message::Font)
+                        .step(1.0_f32)
+                        .on_release(Message::FontDone)
+                        .width(Length::Fixed(120.0)),
+                    text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(44.0)),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center)
+                .into(),
+            ));
+        }
+
+        if self.setting_error {
+            page = page.push(padded_control(text::body(tr("Could not save the setting."))));
+        }
+        page.width(Length::Fixed(POPUP_WIDTH)).padding([0, 0, 8, 0]).into()
+    }
+
+    fn save_interface(&mut self, key: &str, value: Value) {
+        self.setting_error = i18n::save_interface(key, value).is_err();
     }
 
     fn expander(&self, section: Section, label: String, enabled: bool) -> Element<'_, Message> {
@@ -327,6 +422,7 @@ impl Translator {
 
     fn close_popup(&mut self) -> Task<Message> {
         self.expanded = None;
+        self.settings_open = false;
         match self.popup.take() {
             Some(popup) => {
                 self.shot.closed(popup);
@@ -370,6 +466,8 @@ impl cosmic::Application for Translator {
         let mut core = core;
         crate::look::solid(&mut core);
         let mut app = Self { core, shot: Shot::new(SHOT_FOLDER), ..Default::default() };
+        // Debug builds only: start on the settings page (for screenshots).
+        app.settings_open = cfg!(debug_assertions) && std::env::var("MAPRISMA_SHOT_PAGE").as_deref() == Ok("settings");
         let look = app.read_look();
         (app, Task::batch([look, Task::done(cosmic::Action::App(Message::Poll))]))
     }
@@ -410,10 +508,14 @@ impl cosmic::Application for Translator {
                 return look;
             }
             Message::Shot(ShotMsg::Escape(id)) => {
-                return match escape(id, self.popup, self.shot.showing(id), self.expanded.is_some()) {
+                return match escape(id, self.popup, self.shot.showing(id), self.expanded.is_some(), self.settings_open) {
                     Escape::Note => self.shot.update(ShotMsg::Escape(id), self.screenshot_key, true, Message::Shot),
                     Escape::Collapse => {
                         self.expanded = None;
+                        Task::none()
+                    }
+                    Escape::Back => {
+                        self.settings_open = false;
                         Task::none()
                     }
                     Escape::ClosePopup => self.close_popup(),
@@ -482,6 +584,23 @@ impl cosmic::Application for Translator {
             }
             Message::OpenWindow => return self.open_window(),
             Message::Released => {}
+            Message::ToggleSettings => {
+                self.settings_open = !self.settings_open;
+                self.expanded = None;
+            }
+            Message::Language(code) => {
+                self.expanded = None;
+                self.save_interface("language", json!(code));
+            }
+            Message::Corners(choice) => {
+                self.expanded = None;
+                self.save_interface("corners", json!(choice));
+                return self.read_look();
+            }
+            Message::SetShotKey(on) => {
+                self.save_interface("screenshot_key", json!(on));
+                return self.read_look();
+            }
             Message::Rectangle(update) => match update {
                 RectangleUpdate::Rectangle(r) => self.rectangle = r.1,
                 RectangleUpdate::Init(tracker) => self.tracker = Some(tracker),
@@ -491,6 +610,7 @@ impl cosmic::Application for Translator {
                 if self.popup == Some(id) {
                     self.popup = None;
                     self.expanded = None;
+                    self.settings_open = false;
                     return self.release();
                 }
             }
@@ -544,9 +664,10 @@ impl cosmic::Application for Translator {
 
     fn view_window(&self, id: window::Id) -> Element<'_, Message> {
         crate::look::keep_fonts();
+        let page = if self.settings_open { self.settings_page() } else { self.menu() };
         let content = match self.shot.card(id, Message::Shot) {
-            Some(card) => column![card, self.menu()].width(Length::Fixed(POPUP_WIDTH)).into(),
-            None => self.menu(),
+            Some(card) => column![card, page].width(Length::Fixed(POPUP_WIDTH)).into(),
+            None => page,
         };
         corners::apply(&self.corners, self.core.applet.popup_container(content))
     }
@@ -600,10 +721,11 @@ mod tests {
     fn escape_goes_from_the_innermost_outwards() {
         let popup = window::Id::unique();
         let other = window::Id::unique();
-        assert_eq!(escape(popup, Some(popup), true, true), Escape::Note);
-        assert_eq!(escape(popup, Some(popup), false, true), Escape::Collapse);
-        assert_eq!(escape(popup, Some(popup), false, false), Escape::ClosePopup);
-        assert_eq!(escape(other, Some(popup), false, true), Escape::Nothing);
-        assert_eq!(escape(popup, None, false, false), Escape::Nothing);
+        assert_eq!(escape(popup, Some(popup), true, true, true), Escape::Note);
+        assert_eq!(escape(popup, Some(popup), false, true, true), Escape::Collapse);
+        assert_eq!(escape(popup, Some(popup), false, false, true), Escape::Back);
+        assert_eq!(escape(popup, Some(popup), false, false, false), Escape::ClosePopup);
+        assert_eq!(escape(other, Some(popup), false, true, true), Escape::Nothing);
+        assert_eq!(escape(popup, None, false, false, false), Escape::Nothing);
     }
 }

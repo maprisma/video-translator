@@ -43,6 +43,43 @@ pub fn look_settings() -> (bool, String) {
         saved.get("corners").and_then(Value::as_str).unwrap_or("").to_string(),
     )
 }
+/// The saved interface language as the window keeps it: "auto" (the system's) or a code.
+pub fn saved_language() -> String {
+    let saved = std::fs::read_to_string(settings_path())
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .and_then(|v| v["language"].as_str().map(str::to_owned))
+        .unwrap_or_default();
+    if CODES.contains(&saved.as_str()) { saved } else { "auto".into() }
+}
+/// The interface languages, code and own name (as the window lists them).
+pub const LANGUAGE_NAMES: [(&str, &str); 8] = [
+    ("en", "English"),
+    ("de", "Deutsch"),
+    ("fr", "Français"),
+    ("es", "Español"),
+    ("it", "Italiano"),
+    ("pt", "Português"),
+    ("nl", "Nederlands"),
+    ("pl", "Polski"),
+];
+/// Saves one interface setting ("language", "screenshot_key", "corners"), keeping every other
+/// key of the file the window writes too.
+pub fn save_interface(key: &str, value: Value) -> std::io::Result<()> {
+    let path = settings_path();
+    let mut settings = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| Value::Object(Default::default()));
+    settings[key] = value;
+    if let Some(folder) = path.parent() {
+        std::fs::create_dir_all(folder)?;
+    }
+    let temporary = path.with_extension("json.tmp");
+    std::fs::write(&temporary, settings.to_string())?;
+    std::fs::rename(&temporary, &path)
+}
 pub fn language() -> String {
     let selected = std::fs::read_to_string(settings_path())
         .ok()
