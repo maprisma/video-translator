@@ -283,6 +283,17 @@ impl Translator {
                 }
             }
 
+            // Caption font size stays in the menu (Uwe, 2026-11-14): it is changed while watching.
+            let font = self.font.unwrap_or_else(|| self.settings_font());
+            actions = actions.push(padded_control(
+                row![
+                    icon::from_name("preferences-desktop-font-symbolic").size(16).symbolic(true),
+                    slider(FONT.0..=FONT.1, font, Message::Font).step(1.0_f32).on_release(Message::FontDone),
+                    text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(48.0)),
+                ]
+                .spacing(12)
+                .align_y(Alignment::Center),
+            ));
             actions = actions.push(
                 menu_button(text::body(tr("Clear captions")))
                     .on_press_maybe(runtime_ready.then(|| Message::Send(json!({"action": "clear"})))),
@@ -360,20 +371,6 @@ impl Translator {
                 toggler(follow)
                     .on_toggle(|on| Message::Send(json!({"action": "configure", "settings": {"auto_scroll": on}})))
                     .into(),
-            ));
-            let font = self.font.unwrap_or_else(|| self.settings_font());
-            page = page.push(row_of(
-                tr("Caption font size"),
-                row![
-                    slider(FONT.0..=FONT.1, font, Message::Font)
-                        .step(1.0_f32)
-                        .on_release(Message::FontDone)
-                        .width(Length::Fixed(120.0)),
-                    text::body(trf("{0} pt", &[&format!("{font:.0}")])).width(Length::Fixed(44.0)),
-                ]
-                .spacing(8)
-                .align_y(Alignment::Center)
-                .into(),
             ));
         }
 
