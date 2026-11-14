@@ -33,7 +33,8 @@ use cosmic::{Element, theme};
 use serde_json::{Value, json};
 
 // The applet's shared look.rs (the desktop's palette outside COSMIC) and the corners.rs it builds
-// on; only the accent is used here (the caption theme's border).
+// on; used here: the accent (the caption theme's border) and the desktop's interface font for the
+// captions.
 #[allow(dead_code)]
 #[path = "../../applet/src/corners.rs"]
 mod corners;
@@ -65,7 +66,11 @@ fn main() -> cosmic::iced::Result {
     let Some(_lock) = single_instance() else {
         return Ok(());
     };
-    let settings = Settings::default().no_main_window(true).exit_on_close(false).transparent(true);
+    let settings = Settings::default()
+        .default_font(look::default_font())
+        .no_main_window(true)
+        .exit_on_close(false)
+        .transparent(true);
     cosmic::app::run::<Captions>(settings, ())
 }
 
@@ -455,7 +460,9 @@ impl Captions {
         let border_color = if active { theme_color(view, "border_color") } else { Color::TRANSPARENT };
 
         let size = self.font_size() * 96.0 / 72.0;
+        // The desktop's interface font, also after it changed (look::refresh re-reads it).
         let text = cosmic::iced::widget::text(self.text.clone())
+            .font(look::default_font())
             .size(size)
             .line_height(cosmic::iced::widget::text::LineHeight::Relative(1.25))
             .class(foreground)
@@ -559,7 +566,7 @@ impl cosmic::Application for Captions {
                 }
                 self.polling = true;
                 // The desktop's accent: COSMIC's theme, or (KDE, Hyprland) look.rs's palette,
-                // re-read at most every 5 s.
+                // re-read at most every 5 s; its fonts every 30 s.
                 look::refresh();
                 let accent = hex(look::theme().unwrap_or_else(theme::active).cosmic().accent_color().into());
                 let mut payload = json!({
@@ -668,10 +675,12 @@ impl cosmic::Application for Captions {
     }
 
     fn view(&self) -> Element<'_, Message> {
+        look::keep_fonts();
         space::horizontal().width(Length::Fixed(0.0)).into()
     }
 
     fn view_window(&self, id: window::Id) -> Element<'_, Message> {
+        look::keep_fonts();
         if self.surface != Some(id) || self.rect.is_none() {
             return space::horizontal().width(Length::Fill).into();
         }
