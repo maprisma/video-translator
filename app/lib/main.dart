@@ -17,6 +17,7 @@ import 'look.dart';
 import 'shot.dart';
 import 'translator_page.dart';
 import 'window.dart';
+import 'window_style.dart';
 
 /// The window (GTK runner): Esc closes it, its size is kept next to the interface settings.
 final appWindow = AppWindow(
@@ -58,6 +59,8 @@ class TranslatorApp extends StatefulWidget {
 class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserver {
   late final DesktopTheme _desktop = widget.desktopTheme ?? DesktopTheme();
   Timer? _lookTimer;
+  /// Maprisma Settings › App windows: see-through windows for all Maprisma apps (window_style.dart).
+  WindowStyleWatcher? _windowStyle;
 
   @override
   void initState() {
@@ -66,12 +69,14 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
     if (widget.lookWatcher != null) {
       WidgetsBinding.instance.addObserver(this);
       _lookTimer = Timer.periodic(DesktopLookWatcher.filesEvery, (_) => _reloadLook());
+      _windowStyle = WindowStyleWatcher();
     }
   }
 
   @override
   void dispose() {
     _lookTimer?.cancel();
+    _windowStyle?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -89,6 +94,12 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    final style = _windowStyle;
+    if (style == null) return _app(1);
+    return ValueListenableBuilder<double>(valueListenable: style, builder: (context, alpha, _) => _app(alpha));
+  }
+
+  Widget _app(double alpha) {
     return ValueListenableBuilder<LookSettings>(
       valueListenable: look,
       builder: (context, settings, _) => ValueListenableBuilder<DesktopLook>(
@@ -108,8 +119,8 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
               navigatorKey: shotNavigator,
               scaffoldMessengerKey: shotMessenger,
               themeMode: appThemeMode(colors),
-              theme: appTheme(Brightness.light, colors, radius),
-              darkTheme: appTheme(Brightness.dark, colors, radius),
+              theme: withWindowAlpha(appTheme(Brightness.light, colors, radius), alpha),
+              darkTheme: withWindowAlpha(appTheme(Brightness.dark, colors, radius), alpha),
               builder: (context, child) {
                 _desktop.syncHeader(Theme.of(context));
                 return ShotScope(child: child!);
