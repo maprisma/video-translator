@@ -23,6 +23,8 @@ final appWindow = AppWindow(
   channel: const MethodChannel('maprisma_video_translator/window'),
   file: () => File('${interfaceSettingsFile.parent.path}/window.json'),
   defaultSize: const Size(680, 860),
+  // Maprisma Tiling on KDE sizes the window without GTK knowing; Hyprland: only floating counts.
+  notUsers: () async => tiledByMaprismaTiling('com.maprisma.VideoTranslator') || await hyprlandSizeNotUsers(),
 );
 
 Future<void> main() async {
