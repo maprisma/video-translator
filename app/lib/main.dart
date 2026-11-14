@@ -119,8 +119,8 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
               navigatorKey: shotNavigator,
               scaffoldMessengerKey: shotMessenger,
               themeMode: appThemeMode(colors),
-              theme: withWindowAlpha(appTheme(Brightness.light, colors, radius), alpha),
-              darkTheme: withWindowAlpha(appTheme(Brightness.dark, colors, radius), alpha),
+              theme: withWindowAlpha(appTheme(Brightness.light, colors, radius, fonts: desktop.fonts), alpha),
+              darkTheme: withWindowAlpha(appTheme(Brightness.dark, colors, radius, fonts: desktop.fonts), alpha),
               builder: (context, child) {
                 _desktop.syncHeader(Theme.of(context));
                 return ShotScope(child: child!);

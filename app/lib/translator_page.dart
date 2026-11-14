@@ -182,7 +182,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
           children: [
             Text(tr('The caption controller could not be reached'), style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
             const SizedBox(height: AppSpace.xs),
-            SelectableText(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
+            SelectableText(error, style: theme.textTheme.bodySmall?.copyWith(fontFamily: monoFont(context), color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
             const SizedBox(height: AppSpace.md),
             FilledButton(
               onPressed: () {
