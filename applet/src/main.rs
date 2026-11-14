@@ -44,6 +44,7 @@ static AUTOSIZE_ID: LazyLock<Id> = LazyLock::new(|| Id::new("maprisma-video-tran
 
 
 fn main() -> cosmic::iced::Result {
+    crate::look::keep_fonts();
     cosmic::applet::run::<Translator>(())
 }
 
@@ -525,6 +526,7 @@ impl cosmic::Application for Translator {
     }
 
     fn view(&self) -> Element<'_, Message> {
+        crate::look::keep_fonts();
         let horizontal = matches!(self.core.applet.anchor, PanelAnchor::Top | PanelAnchor::Bottom);
         let padding = self.core.applet.suggested_padding(true).0;
         let button = button::custom(self.panel_content())
@@ -541,6 +543,7 @@ impl cosmic::Application for Translator {
     }
 
     fn view_window(&self, id: window::Id) -> Element<'_, Message> {
+        crate::look::keep_fonts();
         let content = match self.shot.card(id, Message::Shot) {
             Some(card) => column![card, self.menu()].width(Length::Fixed(POPUP_WIDTH)).into(),
             None => self.menu(),
