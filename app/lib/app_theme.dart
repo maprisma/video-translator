@@ -173,8 +173,19 @@ ThemeData appTheme(Brightness platform, Map colors, double radius, {Map? fonts})
       elevation: 0,
       shape: Border(top: BorderSide(color: scheme.outlineVariant)),
     ),
+    // Like Maprisma (Uwe): dark with light text. On a dark theme the inverted surface is a light
+    // box that is hard to read, so it takes a dark card tone there.
     tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(color: scheme.inverseSurface, borderRadius: BorderRadius.circular(sizes.control)),
+      decoration: BoxDecoration(
+        color: brightness == Brightness.dark ? scheme.surfaceContainerHighest : scheme.inverseSurface.withValues(alpha: .92),
+        borderRadius: BorderRadius.circular(sizes.control),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      textStyle: TextStyle(
+        color: brightness == Brightness.dark ? scheme.onSurface : scheme.onInverseSurface,
+        fontSize: 13,
+        fontFamily: fontFamily(fonts, 'ui'),
+      ),
     ),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: controlShape)),
     outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: controlShape)),
