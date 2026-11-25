@@ -16,6 +16,7 @@ import 'bridge.dart';
 import 'desktop_look.dart' show desktopName;
 import 'i18n.dart';
 import 'look.dart';
+import 'skin.dart';
 import 'widgets.dart';
 
 /// A number as JavaScript prints it (800, not 800.0).
@@ -255,6 +256,17 @@ class _TranslatorPageState extends State<TranslatorPage> {
         value: look.value.corners,
         onPick: (value) => save(() => saveLook(corners: value)),
       )]),
+      PrefRow(
+        title: tr('App skin'),
+        subtitle: tr('Visual accent for cards and borders; Native keeps your desktop theme untouched.'),
+        suffixes: [ChoiceButton(
+          title: tr('App skin'),
+          options: [for (final choice in appSkins) (choice, skinLabel(choice, tr))],
+          value: look.value.skin,
+          optionColor: (choice) => skinStyle(choice)?.accent,
+          onPick: (value) => save(() => saveLook(skin: value)),
+        )],
+      ),
       SwitchPrefRow(
         title: tr('F12 saves a screenshot'),
         value: look.value.screenshotKey,

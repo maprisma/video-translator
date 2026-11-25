@@ -15,6 +15,7 @@ import 'desktop_theme.dart';
 import 'i18n.dart';
 import 'look.dart';
 import 'shot.dart';
+import 'skin.dart';
 import 'translator_page.dart';
 import 'window.dart';
 import 'window_style.dart';
@@ -125,9 +126,9 @@ class _TranslatorAppState extends State<TranslatorApp> with WidgetsBindingObserv
               debugShowCheckedModeBanner: false,
               navigatorKey: shotNavigator,
               scaffoldMessengerKey: shotMessenger,
-              themeMode: appThemeMode(colors),
-              theme: withWindowAlpha(appTheme(Brightness.light, colors, radius, fonts: desktop.fonts), alpha),
-              darkTheme: withWindowAlpha(appTheme(Brightness.dark, colors, radius, fonts: desktop.fonts), alpha),
+              themeMode: settings.skin == 'native' ? appThemeMode(colors) : ThemeMode.dark,
+              theme: withWindowAlpha(applySkinToTheme(appTheme(Brightness.light, colors, radius, fonts: desktop.fonts), settings.skin, radius: radius), alpha),
+              darkTheme: withWindowAlpha(applySkinToTheme(appTheme(Brightness.dark, colors, radius, fonts: desktop.fonts), settings.skin, radius: radius), alpha),
               builder: (context, child) {
                 _desktop.syncHeader(Theme.of(context));
                 return ShotScope(child: child!);

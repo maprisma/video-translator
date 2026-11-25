@@ -33,7 +33,7 @@ fn settings_path() -> PathBuf {
 /// Settings › F12 saves a screenshot (on unless `"screenshot_key": false`) and › Corners
 /// (`"corners"`: "desktop", "slight", "rounded", "square"), set in the window, kept in the same
 /// file as the language.
-pub fn look_settings() -> (bool, String) {
+pub fn look_settings() -> (bool, String, String) {
     let saved = std::fs::read_to_string(settings_path())
         .ok()
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
@@ -41,6 +41,7 @@ pub fn look_settings() -> (bool, String) {
     (
         saved.get("screenshot_key").and_then(Value::as_bool) != Some(false),
         saved.get("corners").and_then(Value::as_str).unwrap_or("").to_string(),
+        saved.get("skin").and_then(Value::as_str).unwrap_or("").to_string(),
     )
 }
 /// The saved interface language as the window keeps it: "auto" (the system's) or a code.
@@ -72,7 +73,11 @@ pub fn save_interface(key: &str, value: Value) -> std::io::Result<()> {
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
         .filter(Value::is_object)
         .unwrap_or_else(|| Value::Object(Default::default()));
-    settings[key] = value;
+    if matches!((key, value.as_str()), ("skin", Some("native")) | ("corners", Some("desktop"))) {
+        settings.as_object_mut().unwrap().remove(key);
+    } else {
+        settings[key] = value;
+    }
     if let Some(folder) = path.parent() {
         std::fs::create_dir_all(folder)?;
     }

@@ -29,9 +29,11 @@ use maprisma_video_translator_control::*;
 #[allow(dead_code)] // the shared copy of every Maprisma COSMIC app; not every part is used here
 mod corners;
 mod look;
+mod skin;
 mod shot;
 mod shot_files;
 use shot::{Shot, ShotMsg};
+use skin::{skin_label, skin_style, SKINS, SKIN_KEY};
 
 const APP_ID: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator";
 const ICON: &str = "io.github.ubruckhaus.CosmicMaprismaVideoTranslator-symbolic";
@@ -70,15 +72,42 @@ fn dim_text(theme: &cosmic::Theme) -> iced_text::Style {
 
 /// The line under the panel icon while translating: the theme accent, as the icon.
 // The running subtitles: the theme accent, as Hue's lit bulb and the tray's -active-symbolic icon.
-fn lit_svg() -> theme::Svg {
-    theme::Svg::custom(|theme: &cosmic::Theme| iced_svg::Style { color: Some(theme.cosmic().accent_color().into()) })
+fn lit_svg(skin: &str) -> theme::Svg {
+    let accent = skin_style(skin).map(|st| st.accent);
+    theme::Svg::custom(move |theme: &cosmic::Theme| iced_svg::Style {
+        color: Some(accent.unwrap_or_else(|| theme.cosmic().accent_color().into()))
+    })
 }
 
-fn running_line(radius: f32) -> theme::Container<'static> {
+fn running_line(radius: f32, skin: &str) -> theme::Container<'static> {
+    let accent = skin_style(skin).map(|st| st.accent);
     theme::Container::custom(move |theme| iced_container::Style {
-        background: Some(Background::Color(theme.cosmic().accent_color().into())),
+        background: Some(Background::Color(accent.unwrap_or_else(|| theme.cosmic().accent_color().into()))),
         border: Border { radius: radius.into(), ..Default::default() },
         ..Default::default()
+    })
+}
+
+fn active_theme(skin: &str, corners_choice: &str) -> Option<cosmic::Theme> {
+    if let Some(st) = skin_style(skin) {
+        Some(look::theme_from(&st.palette(), Some(corners::radius(corners_choice, corners::desktop_radius()))))
+    } else {
+        corners::theme(corners_choice)
+    }
+}
+
+fn with_alpha(mut color: Color, alpha: f32) -> Color { color.a = alpha; color }
+
+fn skin_card(skin: &str) -> theme::Container<'static> {
+    let style = skin_style(skin);
+    theme::Container::custom(move |theme| {
+        let base = Color::from(theme.cosmic().on_bg_color());
+        let (background, border, width) = match style {
+            Some(st) => (with_alpha(st.bg_tint, 0.28), with_alpha(st.border_tint, 0.48), st.border_width),
+            None => (with_alpha(base, 0.05), with_alpha(base, 0.1), 1.0),
+        };
+        iced_container::Style { background: Some(Background::Color(background)),
+            border: Border { radius: corners::now().radius.into(), color: border, width }, ..Default::default() }
     })
 }
 
@@ -91,6 +120,7 @@ enum Section {
     /// Settings › Language and › Corners lists.
     Language,
     Corners,
+    Skin,
 }
 
 #[derive(Default)]
@@ -106,6 +136,7 @@ struct Translator {
     expanded: Option<Section>,
     shot: Shot,
     corners: String, // Settings › Corners (corners.rs)
+    skin: String,
     screenshot_key: bool,
     /// The settings page (Language, F12, Corners, captions) shows instead of the menu.
     settings_open: bool,
@@ -132,6 +163,7 @@ enum Message {
     ToggleSettings,
     Language(String),
     Corners(String),
+    Skin(String),
     SetShotKey(bool),
 }
 
@@ -169,12 +201,12 @@ impl Translator {
     fn panel_content(&self) -> Element<'_, Message> {
         let size = self.core.applet.suggested_size(true).0;
         let subtitles = icon::from_name(if self.running { ICON } else { ICON_OFF }).size(size).symbolic(true).icon();
-        let subtitles = if self.running { subtitles.class(lit_svg()) } else { subtitles };
+        let subtitles = if self.running { subtitles.class(lit_svg(&self.skin)) } else { subtitles };
         let line: Element<Message> = if self.running {
             container(space::horizontal())
                 .width(Length::Fixed(size as f32))
                 .height(Length::Fixed(2.0))
-                .class(running_line(corners::now().small.min(1.0)))
+                .class(running_line(corners::now().small.min(1.0), &self.skin))
                 .into()
         } else {
             space::vertical().height(Length::Fixed(2.0)).into()
@@ -363,6 +395,24 @@ impl Translator {
             }
         }
 
+        page = page.push(row_of(tr("App skin"), choice(skin_label(&self.skin), Section::Skin)));
+        if self.expanded == Some(Section::Skin) {
+            for skin in SKINS {
+                let name = skin_label(skin);
+                let label = if self.skin == skin { format!("✓ {name}") } else { name };
+                let entry: Element<Message> = if let Some(st) = skin_style(skin) {
+                    let dot = container(space::horizontal())
+                        .width(Length::Fixed(10.0)).height(Length::Fixed(10.0))
+                        .class(theme::Container::custom(move |_| iced_container::Style {
+                            background: Some(Background::Color(st.accent)),
+                            border: Border { radius: 5.0.into(), ..Default::default() }, ..Default::default()
+                        }));
+                    row![dot, text::body(label)].spacing(8).align_y(Alignment::Center).into()
+                } else { text::body(label).into() };
+                page = page.push(menu_button(entry).on_press(Message::Skin(skin.into())));
+            }
+        }
+
         // The captions' own settings (the controller keeps them), once its state is in.
         if self.state.get("settings").is_some() {
             let follow = setting(&self.state, "auto_scroll").and_then(Value::as_bool) != Some(false);
@@ -407,9 +457,10 @@ impl Translator {
     }
 
     fn read_look(&mut self) -> Task<Message> {
-        let (screenshot_key, corners) = i18n::look_settings();
+        let (screenshot_key, corners, skin) = i18n::look_settings();
         self.screenshot_key = screenshot_key;
         self.corners = corners::normalize(&corners).to_string();
+        self.skin = skin::normalize_skin(&skin).to_string();
         corners::set_current(&self.corners);
         // The desktop's colours and corners (Maprisma Theme can change them any time); the
         // popup's view reads them (corners::apply), this only re-reads them (at most every 5 s).
@@ -594,6 +645,11 @@ impl cosmic::Application for Translator {
                 self.save_interface("corners", json!(choice));
                 return self.read_look();
             }
+            Message::Skin(choice) => {
+                self.expanded = None;
+                self.save_interface(SKIN_KEY, json!(skin::normalize_skin(&choice)));
+                return self.read_look();
+            }
             Message::SetShotKey(on) => {
                 self.save_interface("screenshot_key", json!(on));
                 return self.read_look();
@@ -666,7 +722,15 @@ impl cosmic::Application for Translator {
             Some(card) => column![card, page].width(Length::Fixed(POPUP_WIDTH)).into(),
             None => page,
         };
-        corners::apply(&self.corners, self.core.applet.popup_container(content))
+        let content: Element<Message> = if skin_style(&self.skin).is_some() {
+            container(content).class(skin_card(&self.skin)).into()
+        } else {
+            content
+        };
+        match active_theme(&self.skin, &self.corners) {
+            Some(theme) => cosmic::iced::widget::themer(Some(theme), self.core.applet.popup_container(content)).into(),
+            None => self.core.applet.popup_container(content).into(),
+        }
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {

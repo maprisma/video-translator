@@ -30,7 +30,12 @@ Widget _app(VoidCallback onClose) => MaterialApp(
             ),
           ),
           const TextField(),
-          const SizedBox(height: 200, width: 200, key: Key('empty')),
+          GestureDetector(
+            key: const Key('empty'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: const SizedBox(height: 200, width: 200),
+          ),
         ],
       ),
     ),
@@ -74,7 +79,7 @@ void main() {
       expect(closed, 1);
     });
 
-    testWidgets('closes the window from a text field and after it lets go of the focus', (tester) async {
+    testWidgets('closes the window from a text field and after tapping blank space', (tester) async {
       var closed = 0;
       await tester.pumpWidget(_app(() => closed++));
       await tester.tap(find.byType(TextField));

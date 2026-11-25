@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'desktop_look.dart';
 import 'i18n.dart';
+import 'skin.dart';
 
 /// The app's folder in the pictures folder, and its pictures' name.
 const screenshotApp = 'Maprisma Video Translator';
@@ -20,9 +21,10 @@ const cornerChoices = ['desktop', 'slight', 'rounded', 'square'];
 
 @immutable
 class LookSettings {
-  const LookSettings({this.screenshotKey = true, this.corners = 'desktop'});
+  const LookSettings({this.screenshotKey = true, this.corners = 'desktop', this.skin = 'native'});
   final bool screenshotKey;
   final String corners;
+  final String skin;
 
   /// From the settings file's JSON: a missing or unknown value is the default.
   factory LookSettings.fromJson(Object? json) {
@@ -32,14 +34,15 @@ class LookSettings {
     return LookSettings(
       screenshotKey: key is bool ? key : true,
       corners: cornerChoices.contains(corners) ? corners as String : 'desktop',
+      skin: normalizeSkin(map[skinKey] is String ? map[skinKey] as String : null),
     );
   }
 
   @override
   bool operator ==(Object other) =>
-      other is LookSettings && other.screenshotKey == screenshotKey && other.corners == corners;
+      other is LookSettings && other.screenshotKey == screenshotKey && other.corners == corners && other.skin == skin;
   @override
-  int get hashCode => Object.hash(screenshotKey, corners);
+  int get hashCode => Object.hash(screenshotKey, corners, skin);
 }
 
 LookSettings readLook([File? file]) {
@@ -53,7 +56,7 @@ LookSettings readLook([File? file]) {
 final look = ValueNotifier<LookSettings>(readLook());
 
 /// Saves one look value, keeping every other key of the settings file.
-void saveLook({bool? screenshotKey, String? corners, File? file}) {
+void saveLook({bool? screenshotKey, String? corners, String? skin, File? file}) {
   if (corners != null && !cornerChoices.contains(corners)) return;
   final target = file ?? lookSettingsFile();
   Map<String, dynamic> settings = {};
@@ -63,7 +66,12 @@ void saveLook({bool? screenshotKey, String? corners, File? file}) {
     /* first save */
   }
   if (screenshotKey != null) settings['screenshot_key'] = screenshotKey;
-  if (corners != null) settings['corners'] = corners;
+  if (corners != null) {
+    if (corners == 'desktop') { settings.remove('corners'); } else { settings['corners'] = corners; }
+  }
+  if (skin != null) {
+    if (normalizeSkin(skin) == 'native') { settings.remove(skinKey); } else { settings[skinKey] = skin; }
+  }
   target.parent.createSync(recursive: true);
   final temporary = File('${target.path}.tmp');
   temporary.writeAsStringSync(jsonEncode(settings));

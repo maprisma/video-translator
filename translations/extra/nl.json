@@ -1,4 +1,6 @@
 {
+  "Solid": "Ondoorzichtig", "Transparent": "Transparant", "Glassy (blurred)": "Glasachtig (wazig)", "Follow the desktop": "Bureaublad volgen",
+  "App skin": "App-stijl", "Visual accent for cards and borders; Native keeps your desktop theme untouched.": "Visueel accent voor kaarten en randen; Natief laat je bureaubladthema ongemoeid.", "Native": "Natief", "Synthwave": "Synthwave", "Cozy": "Gezellig", "Terminal": "Terminal", "Disco": "Disco", "Zen": "Zen",
   "API key or bearer token": "API-sleutel of Bearer-token",
   "API key or bearer token · set": "API-sleutel of Bearer-token · ingesteld",
   "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Voeg aan je Hyprland-configuratie een toetsbinding toe die een opdracht uitvoert zoals “{0} toggle”, “{0} font bigger” of “{0} text-color next”. Elke toetsaanslag voert die één keer uit. “video-trans help” in een terminal toont alle acties.",

@@ -218,6 +218,7 @@ class ChoiceButton extends StatelessWidget {
     required this.onPick,
     this.searchable = false,
     this.title = '',
+    this.optionColor,
   });
 
   final List<Option> options;
@@ -225,6 +226,7 @@ class ChoiceButton extends StatelessWidget {
   final ValueChanged<String> onPick;
   final bool searchable;
   final String title;
+  final Color? Function(String)? optionColor;
 
   static const double width = 240;
 
@@ -270,7 +272,13 @@ class ChoiceButton extends StatelessWidget {
             leadingIcon: Icon(option.$1 == value ? Icons.check : null, size: 18),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Text(option.$2, overflow: TextOverflow.ellipsis),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (optionColor?.call(option.$1) case final color?) ...[
+                  Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                  const SizedBox(width: 8),
+                ],
+                Text(option.$2, overflow: TextOverflow.ellipsis),
+              ]),
             ),
           ),
       ],

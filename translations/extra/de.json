@@ -1,4 +1,6 @@
 {
+  "Solid": "Undurchsichtig", "Transparent": "Transparent", "Glassy (blurred)": "Glasig (verschwommen)", "Follow the desktop": "Wie der Desktop",
+  "App skin": "App-Design", "Visual accent for cards and borders; Native keeps your desktop theme untouched.": "Visueller Akzent für Karten und Rahmen; Nativ lässt dein Desktop-Design unverändert.", "Native": "Nativ", "Synthwave": "Synthwave", "Cozy": "Gemütlich", "Terminal": "Terminal", "Disco": "Disco", "Zen": "Zen",
   "API key or bearer token": "API-Schlüssel oder Bearer-Token",
   "API key or bearer token · set": "API-Schlüssel oder Bearer-Token · gesetzt",
   "Add a key binding to your Hyprland configuration that runs a command such as “{0} toggle”, “{0} font bigger” or “{0} text-color next”. Each key press runs it once. “video-trans help” in a terminal lists every action.": "Legen Sie in Ihrer Hyprland-Konfiguration eine Tastenbelegung an, die einen Befehl wie „{0} toggle“, „{0} font bigger“ oder „{0} text-color next“ ausführt. Jeder Tastendruck führt ihn einmal aus. „video-trans help“ im Terminal listet alle Aktionen auf.",
