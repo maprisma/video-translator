@@ -9,7 +9,7 @@ import 'package:maprisma_video_translator/look.dart';
 import 'package:maprisma_video_translator/main.dart';
 import 'package:maprisma_video_translator/skin.dart';
 import 'package:maprisma_video_translator/translator_page.dart';
-import 'package:maprisma_video_translator/window_style.dart';
+import 'package:maprisma_ui/window_style.dart';
 
 class _Bridge extends Bridge {
   _Bridge() : super(script: '/nonexistent');

@@ -1,4 +1,5 @@
 use cosmic::iced::Color;
+use maprisma_kit::look;
 use maprisma_video_translator_control::tr;
 
 pub const SKIN_KEY: &str = "skin";
@@ -16,8 +17,8 @@ pub struct SkinStyle {
 }
 
 impl SkinStyle {
-    pub fn palette(&self) -> crate::look::Palette {
-        crate::look::Palette {
+    pub fn palette(&self) -> look::Palette {
+        look::Palette {
             accent: Some(self.accent_rgb), background: Some(self.window_bg), foreground: Some(self.foreground),
             red: None, yellow: None, green: None,
         }
@@ -77,7 +78,7 @@ mod tests {
             if let Some(style) = skin_style(skin) {
                 assert_eq!(style.palette().accent, Some(style.accent_rgb));
                 assert_eq!(style.palette().background, Some(style.window_bg));
-                assert!(crate::look::theme_from(&style.palette(), Some(12.0)).cosmic().is_dark);
+                assert!(look::theme_from(&style.palette(), Some(12.0)).cosmic().is_dark);
             }
         }
     }

@@ -25,13 +25,10 @@ use cosmic::widget::{
 };
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
+use maprisma_kit::{corners, look};
 use maprisma_video_translator_control::*;
-#[allow(dead_code)] // the shared copy of every Maprisma COSMIC app; not every part is used here
-mod corners;
-mod look;
 mod skin;
 mod shot;
-mod shot_files;
 use shot::{Shot, ShotMsg};
 use skin::{skin_label, skin_style, SKINS, SKIN_KEY};
 

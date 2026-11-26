@@ -6,13 +6,14 @@ license = "MIT"
 description = "Maprisma Video Translator's caption window on COSMIC: an overlay layer above all windows, fullscreen video too"
 
 [dependencies]
+maprisma-kit = { git = "https://github.com/maprisma/maprisma-kit-rs", tag = "v0.1.0", default-features = false, features = ["look"] }
 maprisma-video-translator-control = { path = "../control" }
 serde_json = "1"
 libc = "0.2"
 tokio = { version = "1", features = ["process", "io-util", "time", "macros", "rt", "net"] }
 
 [dependencies.libcosmic]
-git = "https://github.com/pop-os/libcosmic"
-rev = "95236a944bfd51c63a2fc65fe50a592c47168d40"
+git = "https://github.com/maprisma/libcosmic"
+rev = "40d534c5d5a463cc473e0c9f01ad2da068b11bcd"
 default-features = false
 features = ["dbus-config", "multi-window", "tokio", "wayland", "winit"]

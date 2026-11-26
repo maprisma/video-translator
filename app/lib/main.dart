@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:maprisma_ui/window_style.dart';
 
 import 'app_theme.dart';
 import 'bridge.dart';
@@ -18,7 +19,6 @@ import 'shot.dart';
 import 'skin.dart';
 import 'translator_page.dart';
 import 'window.dart';
-import 'window_style.dart';
 
 /// The window (GTK runner): Esc closes it, its size is kept next to the interface settings.
 final appWindow = AppWindow(

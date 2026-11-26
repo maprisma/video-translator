@@ -32,15 +32,7 @@ use cosmic::iced::{Background, Border, Color, Event, Length, Limits, Point, Rect
 use cosmic::{Element, theme};
 use serde_json::{Value, json};
 
-// The applet's shared look.rs (the desktop's palette outside COSMIC) and the corners.rs it builds
-// on; used here: the accent (the caption theme's border) and the desktop's interface font for the
-// captions.
-#[allow(dead_code)]
-#[path = "../../applet/src/corners.rs"]
-mod corners;
-#[allow(dead_code)]
-#[path = "../../applet/src/look.rs"]
-mod look;
+use maprisma_kit::look;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 
 const POLL: Duration = Duration::from_millis(250);
